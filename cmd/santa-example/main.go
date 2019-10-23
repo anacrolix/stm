@@ -27,7 +27,7 @@
 //   and then delay for a random interval before trying to join a group again.
 //
 // See the paper for more details regarding the solution's implementation.
-package stm_test
+package main
 
 import (
 	"fmt"
@@ -160,7 +160,7 @@ func spawnSanta(elves, reindeer *group) {
 	}
 }
 
-func Example() {
+func main() {
 	elfGroup := newGroup(3)
 	for i := 0; i < 10; i++ {
 		go spawnElf(elfGroup, i)
