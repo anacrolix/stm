@@ -6,9 +6,7 @@ type Tx struct {
 	writes map[*Var]interface{}
 }
 
-// verify checks that none of the logged values have changed since the
-// transaction began.
-// TODO: is pointer equality good enough? probably not, without immutable data
+// Check that none of the logged values have changed since the transaction began.
 func (tx *Tx) verify() bool {
 	for v, version := range tx.reads {
 		v.mu.Lock()
