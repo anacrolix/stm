@@ -125,3 +125,8 @@ func BenchmarkReadVarChannel(b *testing.B) {
 		wg.Wait()
 	}
 }
+
+func BenchmarkPingPong(b *testing.B) {
+	b.ReportAllocs()
+	testPingPong(b, b.N, func(string) {})
+}

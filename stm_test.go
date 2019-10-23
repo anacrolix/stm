@@ -216,3 +216,44 @@ func TestAtomicSetRetry(t *testing.T) {
 		t.Fatal("AtomicSet did not wake up a waiting transaction")
 	}
 }
+
+func testPingPong(t testing.TB, n int, afterHit func(string)) {
+	ball := NewVar(false)
+	doneVar := NewVar(false)
+	hits := NewVar(0)
+	ready := NewVar(true) // The ball is ready for hitting.
+	bat := func(from, to interface{}, noise string) {
+		done := false
+		for {
+			Atomically(func(tx *Tx) {
+				if tx.Get(doneVar).(bool) {
+					done = true
+					return
+				}
+				tx.Assert(tx.Get(ready).(bool))
+				if tx.Get(ball) == from {
+					tx.Set(ball, to)
+					tx.Set(hits, tx.Get(hits).(int)+1)
+					tx.Set(ready, false)
+					return
+				}
+				tx.Retry()
+			})
+			if done {
+				break
+			}
+			afterHit(noise)
+			AtomicSet(ready, true)
+		}
+	}
+	go bat(false, true, "ping!")
+	go bat(true, false, "pong!")
+	Atomically(func(tx *Tx) {
+		tx.Assert(tx.Get(hits).(int) >= n)
+		tx.Set(doneVar, true)
+	})
+}
+
+func TestPingPong(t *testing.T) {
+	testPingPong(t, 42, func(s string) { t.Log(s) })
+}
