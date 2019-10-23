@@ -39,7 +39,7 @@ func (tx *Tx) commit() {
 
 // wait blocks until another transaction modifies any of the Vars read by tx.
 func (tx *Tx) wait() {
-	globalCond.L.Lock()
+	globalLock.Lock()
 	for v := range tx.reads {
 		v.watchers[tx] = struct{}{}
 	}
@@ -49,7 +49,7 @@ func (tx *Tx) wait() {
 	for v := range tx.reads {
 		delete(v.watchers, tx)
 	}
-	globalCond.L.Unlock()
+	globalLock.Unlock()
 }
 
 // Get returns the value of v as of the start of the transaction.
