@@ -1,9 +1,14 @@
 package stm
 
+import (
+	"sync"
+)
+
 // A Tx represents an atomic transaction.
 type Tx struct {
 	reads  map[*Var]uint64
 	writes map[*Var]interface{}
+	cond   sync.Cond
 }
 
 // Check that none of the logged values have changed since the transaction began.
@@ -25,6 +30,9 @@ func (tx *Tx) commit() {
 		v.mu.Lock()
 		v.val = val
 		v.version++
+		for tx := range v.watchers {
+			tx.cond.Broadcast()
+		}
 		v.mu.Unlock()
 	}
 }
@@ -32,8 +40,14 @@ func (tx *Tx) commit() {
 // wait blocks until another transaction modifies any of the Vars read by tx.
 func (tx *Tx) wait() {
 	globalCond.L.Lock()
+	for v := range tx.reads {
+		v.watchers[tx] = struct{}{}
+	}
 	for tx.verify() {
-		globalCond.Wait()
+		tx.cond.Wait()
+	}
+	for v := range tx.reads {
+		delete(v.watchers, tx)
 	}
 	globalCond.L.Unlock()
 }

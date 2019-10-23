@@ -8,6 +8,7 @@ retry:
 		reads:  make(map[*Var]uint64),
 		writes: make(map[*Var]interface{}),
 	}
+	tx.cond.L = &globalLock
 	if catchRetry(fn, tx) {
 		// wait for one of the variables we read to change before retrying
 		tx.wait()
@@ -40,14 +41,9 @@ func AtomicGet(v *Var) interface{} {
 
 // AtomicSet is a helper function that atomically writes a value.
 func AtomicSet(v *Var, val interface{}) {
-	// since we're only doing one operation, we don't need a full transaction
-	globalLock.Lock()
-	v.mu.Lock()
-	v.val = val
-	v.version++
-	v.mu.Unlock()
-	globalCond.Broadcast()
-	globalLock.Unlock()
+	Atomically(func(tx *Tx) {
+		tx.Set(v, val)
+	})
 }
 
 // Compose is a helper function that composes multiple transactions into a
