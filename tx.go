@@ -69,6 +69,9 @@ func (tx *Tx) Get(v *Var) interface{} {
 
 // Set sets the value of a Var for the lifetime of the transaction.
 func (tx *Tx) Set(v *Var, val interface{}) {
+	if v == nil {
+		panic("nil Var")
+	}
 	tx.writes[v] = val
 }
 
