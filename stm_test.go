@@ -223,25 +223,19 @@ func testPingPong(t testing.TB, n int, afterHit func(string)) {
 	hits := NewVar(0)
 	ready := NewVar(true) // The ball is ready for hitting.
 	bat := func(from, to interface{}, noise string) {
-		done := false
-		for {
-			Atomically(func(tx *Tx) {
-				if tx.Get(doneVar).(bool) {
-					done = true
-					return
-				}
-				tx.Assert(tx.Get(ready).(bool))
-				if tx.Get(ball) == from {
-					tx.Set(ball, to)
-					tx.Set(hits, tx.Get(hits).(int)+1)
-					tx.Set(ready, false)
-					return
-				}
-				tx.Retry()
-			})
-			if done {
-				break
+		for !Atomically(func(tx *Tx) {
+			if tx.Get(doneVar).(bool) {
+				tx.Return(true)
 			}
+			tx.Assert(tx.Get(ready).(bool))
+			if tx.Get(ball) == from {
+				tx.Set(ball, to)
+				tx.Set(hits, tx.Get(hits).(int)+1)
+				tx.Set(ready, false)
+				tx.Return(false)
+			}
+			tx.Retry()
+		}).(bool) {
 			afterHit(noise)
 			AtomicSet(ready, true)
 		}

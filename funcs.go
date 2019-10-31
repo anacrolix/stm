@@ -1,16 +1,33 @@
 package stm
 
 // Atomically executes the atomic function fn.
-func Atomically(fn func(*Tx)) {
+func Atomically(fn func(*Tx)) interface{} {
 retry:
 	// run the transaction
 	tx := &Tx{
 		reads:  make(map[*Var]uint64),
 		writes: make(map[*Var]interface{}),
 	}
-	if catchRetry(fn, tx) {
-		// wait for one of the variables we read to change before retrying
-		tx.wait()
+	var ret interface{}
+	if func() (retry bool) {
+		defer func() {
+			r := recover()
+			if r == nil {
+				return
+			}
+			if _ret, ok := r.(_return); ok {
+				ret = _ret.value
+			} else if r == Retry {
+				// wait for one of the variables we read to change before retrying
+				tx.wait()
+				retry = true
+			} else {
+				panic(r)
+			}
+		}()
+		fn(tx)
+		return false
+	}() {
 		goto retry
 	}
 	// verify the read log
@@ -25,6 +42,7 @@ retry:
 		globalCond.Broadcast()
 	}
 	globalLock.Unlock()
+	return ret
 }
 
 // AtomicGet is a helper function that atomically reads a value.

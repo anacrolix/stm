@@ -73,3 +73,11 @@ func (tx *Tx) Assert(p bool) {
 		tx.Retry()
 	}
 }
+
+func (tx *Tx) Return(v interface{}) {
+	panic(_return{v})
+}
+
+type _return struct {
+	value interface{}
+}
