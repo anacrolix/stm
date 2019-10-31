@@ -24,16 +24,17 @@ func (tx *Tx) verify() bool {
 	return true
 }
 
-// commit writes the values in the transaction log to their respective Vars.
+// Writes the values in the transaction log to their respective Vars.
 func (tx *Tx) commit() {
 	for v, val := range tx.writes {
 		v.mu.Lock()
 		v.val = val
 		v.version++
+		v.mu.Unlock()
 		for tx := range v.watchers {
 			tx.cond.Broadcast()
+			delete(v.watchers, tx)
 		}
-		v.mu.Unlock()
 	}
 }
 
@@ -94,4 +95,18 @@ func (tx *Tx) Return(v interface{}) {
 
 type _return struct {
 	value interface{}
+}
+
+func (tx *Tx) reset() {
+	for k := range tx.reads {
+		delete(tx.reads, k)
+	}
+	for k := range tx.writes {
+		delete(tx.writes, k)
+	}
+}
+
+func (tx *Tx) recycle() {
+	tx.reset()
+	txPool.Put(tx)
 }

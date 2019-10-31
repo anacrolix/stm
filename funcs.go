@@ -1,14 +1,26 @@
 package stm
 
+import (
+	"sync"
+)
+
+var (
+	txPool = sync.Pool{New: func() interface{} {
+		tx := &Tx{
+			reads:  make(map[*Var]uint64),
+			writes: make(map[*Var]interface{}),
+		}
+		tx.cond.L = &globalLock
+		return tx
+	}}
+)
+
 // Atomically executes the atomic function fn.
 func Atomically(fn func(*Tx)) interface{} {
-retry:
 	// run the transaction
-	tx := &Tx{
-		reads:  make(map[*Var]uint64),
-		writes: make(map[*Var]interface{}),
-	}
-	tx.cond.L = &globalLock
+	tx := txPool.Get().(*Tx)
+retry:
+	tx.reset()
 	var ret interface{}
 	if func() (retry bool) {
 		defer func() {
@@ -40,6 +52,7 @@ retry:
 	// commit the write log and broadcast that variables have changed
 	tx.commit()
 	globalLock.Unlock()
+	tx.recycle()
 	return ret
 }
 
