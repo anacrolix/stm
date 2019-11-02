@@ -7,6 +7,9 @@ import (
 )
 
 func ContextDoneVar(ctx context.Context) (*stm.Var, func()) {
+	if ctx.Err() != nil {
+		return stm.NewVar(true), func() {}
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	_var := stm.NewVar(false)
 	go func() {
