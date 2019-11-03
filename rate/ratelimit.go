@@ -6,8 +6,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/lukechampine/stm"
-	"github.com/lukechampine/stm/stmutil"
+	"github.com/anacrolix/stm"
+	"github.com/anacrolix/stm/stmutil"
 )
 
 type numTokens = int

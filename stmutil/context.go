@@ -3,7 +3,7 @@ package stmutil
 import (
 	"context"
 
-	"github.com/lukechampine/stm"
+	"github.com/anacrolix/stm"
 )
 
 func ContextDoneVar(ctx context.Context) (*stm.Var, func()) {

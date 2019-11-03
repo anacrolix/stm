@@ -1,4 +1,4 @@
-module github.com/lukechampine/stm
+module github.com/anacrolix/stm
 
 go 1.13
 

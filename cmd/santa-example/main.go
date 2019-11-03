@@ -34,7 +34,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/lukechampine/stm"
+	"github.com/anacrolix/stm"
 )
 
 type gate struct {

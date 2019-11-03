@@ -1,6 +1,6 @@
 # stm
 
-[![GoDoc](https://godoc.org/github.com/lukechampine/stm?status.svg)](https://godoc.org/github.com/lukechampine/stm) [![Go Report Card](https://goreportcard.com/badge/github.com/lukechampine/stm)](https://goreportcard.com/report/github.com/lukechampine/stm)
+[![GoDoc](https://godoc.org/github.com/anacrolix/stm?status.svg)](https://godoc.org/github.com/anacrolix/stm) [![Go Report Card](https://goreportcard.com/badge/github.com/anacrolix/stm)](https://goreportcard.com/report/github.com/anacrolix/stm)
 
 Package `stm` provides [Software Transactional Memory](https://en.wikipedia.org/wiki/Software_transactional_memory) operations for Go. This is
 an alternative to the standard way of writing concurrent code (channels and
@@ -187,3 +187,7 @@ BenchmarkReadVarMutex-4    	   10000	    248479 ns/op
 BenchmarkReadVarChannel-4  	   10000	    240086 ns/op
 
 ```
+
+## Credits
+
+Package stm was [originally](https://github.com/lukechampine/stm/issues/3#issuecomment-549087541) created by lukechampine.
