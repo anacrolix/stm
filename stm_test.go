@@ -15,12 +15,10 @@ func TestDecrement(t *testing.T) {
 	}
 	done := make(chan struct{})
 	go func() {
-		for {
-			if AtomicGet(x).(int) == 500 {
-				break
-			}
-		}
-		done <- struct{}{}
+		Atomically(func(tx *Tx) {
+			tx.Assert(tx.Get(x) == 500)
+		})
+		close(done)
 	}()
 	select {
 	case <-done:
