@@ -10,7 +10,7 @@ var (
 			reads:  make(map[*Var]uint64),
 			writes: make(map[*Var]interface{}),
 		}
-		tx.cond.L = &globalLock
+		tx.cond.L = &tx.mu
 		return tx
 	}}
 )
@@ -44,14 +44,14 @@ retry:
 		goto retry
 	}
 	// verify the read log
-	globalLock.Lock()
+	tx.lockAllVars()
 	if !tx.verify() {
-		globalLock.Unlock()
+		tx.unlock()
 		goto retry
 	}
 	// commit the write log and broadcast that variables have changed
 	tx.commit()
-	globalLock.Unlock()
+	tx.unlock()
 	tx.recycle()
 	return ret
 }

@@ -1,6 +1,7 @@
 package stm
 
 import (
+	"sync"
 	"sync/atomic"
 	"unsafe"
 )
@@ -8,7 +9,8 @@ import (
 // Holds an STM variable.
 type Var struct {
 	state    *varSnapshot
-	watchers map[*Tx]struct{}
+	watchers sync.Map
+	mu       sync.Mutex
 }
 
 func (v *Var) addr() *unsafe.Pointer {
@@ -35,6 +37,5 @@ func NewVar(val interface{}) *Var {
 		state: &varSnapshot{
 			val: val,
 		},
-		watchers: make(map[*Tx]struct{}),
 	}
 }
