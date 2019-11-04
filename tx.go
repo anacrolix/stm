@@ -42,17 +42,17 @@ func (tx *Tx) commit() {
 
 // wait blocks until another transaction modifies any of the Vars read by tx.
 func (tx *Tx) wait() {
-	tx.mu.Lock() // probably can around verify
 	for v := range tx.reads {
 		v.watchers.Store(tx, nil)
 	}
+	tx.mu.Lock()
 	for tx.verify() {
 		tx.cond.Wait()
 	}
+	tx.mu.Unlock()
 	for v := range tx.reads {
 		v.watchers.Delete(tx)
 	}
-	tx.mu.Unlock() // move back to verify?
 }
 
 // Get returns the value of v as of the start of the transaction.
