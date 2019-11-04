@@ -3,6 +3,8 @@ package stm
 import (
 	"sync"
 	"testing"
+
+	"github.com/anacrolix/missinggo/iter"
 )
 
 func BenchmarkAtomicGet(b *testing.B) {
@@ -126,7 +128,24 @@ func BenchmarkReadVarChannel(b *testing.B) {
 	}
 }
 
+func parallelPingPongs(b *testing.B, n int) {
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for range iter.N(n) {
+		go func() {
+			defer wg.Done()
+			testPingPong(b, b.N, func(string) {})
+		}()
+	}
+	wg.Wait()
+}
+
+func BenchmarkPingPong4(b *testing.B) {
+	b.ReportAllocs()
+	parallelPingPongs(b, 4)
+}
+
 func BenchmarkPingPong(b *testing.B) {
 	b.ReportAllocs()
-	testPingPong(b, b.N, func(string) {})
+	parallelPingPongs(b, 1)
 }

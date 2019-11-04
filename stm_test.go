@@ -1,8 +1,11 @@
 package stm
 
 import (
+	"sync"
 	"testing"
 	"time"
+
+	_ "github.com/anacrolix/envpprof"
 )
 
 func TestDecrement(t *testing.T) {
@@ -220,7 +223,9 @@ func testPingPong(t testing.TB, n int, afterHit func(string)) {
 	doneVar := NewVar(false)
 	hits := NewVar(0)
 	ready := NewVar(true) // The ball is ready for hitting.
+	var wg sync.WaitGroup
 	bat := func(from, to interface{}, noise string) {
+		defer wg.Done()
 		for !Atomically(func(tx *Tx) {
 			if tx.Get(doneVar).(bool) {
 				tx.Return(true)
@@ -238,12 +243,14 @@ func testPingPong(t testing.TB, n int, afterHit func(string)) {
 			AtomicSet(ready, true)
 		}
 	}
+	wg.Add(2)
 	go bat(false, true, "ping!")
 	go bat(true, false, "pong!")
 	Atomically(func(tx *Tx) {
 		tx.Assert(tx.Get(hits).(int) >= n)
 		tx.Set(doneVar, true)
 	})
+	wg.Wait()
 }
 
 func TestPingPong(t *testing.T) {
