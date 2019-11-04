@@ -1,20 +1,40 @@
 package stm
 
-import "sync"
+import (
+	"sync/atomic"
+	"unsafe"
+)
 
 // Holds an STM variable.
 type Var struct {
-	mu      sync.Mutex
+	state    *varSnapshot
+	watchers map[*Tx]struct{}
+}
+
+func (v *Var) addr() *unsafe.Pointer {
+	return (*unsafe.Pointer)(unsafe.Pointer(&v.state))
+}
+
+func (v *Var) loadState() *varSnapshot {
+	return (*varSnapshot)(atomic.LoadPointer(v.addr()))
+}
+
+func (v *Var) changeValue(new interface{}) {
+	version := v.loadState().version
+	atomic.StorePointer(v.addr(), unsafe.Pointer(&varSnapshot{version: version + 1, val: new}))
+}
+
+type varSnapshot struct {
 	val     interface{}
 	version uint64
-
-	watchers map[*Tx]struct{}
 }
 
 // Returns a new STM variable.
 func NewVar(val interface{}) *Var {
 	return &Var{
-		val:      val,
+		state: &varSnapshot{
+			val: val,
+		},
 		watchers: make(map[*Tx]struct{}),
 	}
 }

@@ -14,9 +14,7 @@ type Tx struct {
 // Check that none of the logged values have changed since the transaction began.
 func (tx *Tx) verify() bool {
 	for v, version := range tx.reads {
-		v.mu.Lock()
-		changed := v.version != version
-		v.mu.Unlock()
+		changed := v.loadState().version != version
 		if changed {
 			return false
 		}
@@ -27,10 +25,7 @@ func (tx *Tx) verify() bool {
 // Writes the values in the transaction log to their respective Vars.
 func (tx *Tx) commit() {
 	for v, val := range tx.writes {
-		v.mu.Lock()
-		v.val = val
-		v.version++
-		v.mu.Unlock()
+		v.changeValue(val)
 		for tx := range v.watchers {
 			tx.cond.Broadcast()
 			delete(v.watchers, tx)
@@ -59,13 +54,12 @@ func (tx *Tx) Get(v *Var) interface{} {
 	if val, ok := tx.writes[v]; ok {
 		return val
 	}
-	v.mu.Lock()
-	defer v.mu.Unlock()
+	state := v.loadState()
 	// If we haven't previously read v, record its version
 	if _, ok := tx.reads[v]; !ok {
-		tx.reads[v] = v.version
+		tx.reads[v] = state.version
 	}
-	return v.val
+	return state.val
 }
 
 // Set sets the value of a Var for the lifetime of the transaction.

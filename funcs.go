@@ -58,13 +58,7 @@ retry:
 
 // AtomicGet is a helper function that atomically reads a value.
 func AtomicGet(v *Var) interface{} {
-	// since we're only doing one operation, we don't need a full transaction
-	globalLock.Lock()
-	v.mu.Lock()
-	val := v.val
-	v.mu.Unlock()
-	globalLock.Unlock()
-	return val
+	return v.loadState().val
 }
 
 // AtomicSet is a helper function that atomically writes a value.
