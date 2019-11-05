@@ -19,6 +19,17 @@ func (v *Var) loadState() varSnapshot {
 func (v *Var) changeValue(new interface{}) {
 	version := v.loadState().version
 	v.state.Store(varSnapshot{version: version + 1, val: new})
+	v.wakeWatchers()
+}
+
+func (v *Var) wakeWatchers() {
+	v.watchers.Range(func(k, _ interface{}) bool {
+		tx := k.(*Tx)
+		tx.mu.Lock()
+		tx.cond.Broadcast()
+		tx.mu.Unlock()
+		return true
+	})
 }
 
 type varSnapshot struct {

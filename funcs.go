@@ -69,9 +69,9 @@ func AtomicGet(v *Var) interface{} {
 
 // AtomicSet is a helper function that atomically writes a value.
 func AtomicSet(v *Var, val interface{}) {
-	Atomically(func(tx *Tx) {
-		tx.Set(v, val)
-	})
+	v.mu.Lock()
+	v.changeValue(val)
+	v.mu.Unlock()
 }
 
 // Compose is a helper function that composes multiple transactions into a

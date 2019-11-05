@@ -30,13 +30,6 @@ func (tx *Tx) verify() bool {
 func (tx *Tx) commit() {
 	for v, val := range tx.writes {
 		v.changeValue(val)
-		v.watchers.Range(func(k, _ interface{}) bool {
-			tx := k.(*Tx)
-			tx.mu.Lock()
-			tx.cond.Broadcast()
-			tx.mu.Unlock()
-			return true
-		})
 	}
 }
 
