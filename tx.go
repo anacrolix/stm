@@ -47,6 +47,7 @@ func (tx *Tx) wait() {
 	}
 	tx.mu.Lock()
 	for tx.verify() {
+		expvars.Add("waits", 1)
 		tx.cond.Wait()
 	}
 	tx.mu.Unlock()

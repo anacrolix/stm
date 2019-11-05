@@ -6,6 +6,7 @@ import (
 
 var (
 	txPool = sync.Pool{New: func() interface{} {
+		expvars.Add("new txs", 1)
 		tx := &Tx{
 			reads:  make(map[*Var]uint64),
 			writes: make(map[*Var]interface{}),
@@ -17,6 +18,7 @@ var (
 
 // Atomically executes the atomic function fn.
 func Atomically(fn func(*Tx)) interface{} {
+	expvars.Add("atomically", 1)
 	// run the transaction
 	tx := txPool.Get().(*Tx)
 retry:
@@ -29,8 +31,10 @@ retry:
 				return
 			}
 			if _ret, ok := r.(_return); ok {
+				expvars.Add("explicit returns", 1)
 				ret = _ret.value
 			} else if r == Retry {
+				expvars.Add("retries", 1)
 				// wait for one of the variables we read to change before retrying
 				tx.wait()
 				retry = true
@@ -47,11 +51,13 @@ retry:
 	tx.lockAllVars()
 	if !tx.verify() {
 		tx.unlock()
+		expvars.Add("failed commits", 1)
 		goto retry
 	}
 	// commit the write log and broadcast that variables have changed
 	tx.commit()
 	tx.unlock()
+	expvars.Add("commits", 1)
 	tx.recycle()
 	return ret
 }
