@@ -1,6 +1,7 @@
 package stm
 
 import (
+	"runtime/pprof"
 	"sync"
 )
 
@@ -14,7 +15,16 @@ var (
 		tx.cond.L = &tx.mu
 		return tx
 	}}
+	failedCommitsProfile *pprof.Profile
 )
+
+const profileFailedCommits = false
+
+func init() {
+	if profileFailedCommits {
+		failedCommitsProfile = pprof.NewProfile("stmFailedCommits")
+	}
+}
 
 // Atomically executes the atomic function fn.
 func Atomically(fn func(*Tx)) interface{} {
@@ -52,6 +62,9 @@ retry:
 	if !tx.verify() {
 		tx.unlock()
 		expvars.Add("failed commits", 1)
+		if profileFailedCommits {
+			failedCommitsProfile.Add(new(int), 0)
+		}
 		goto retry
 	}
 	// commit the write log and broadcast that variables have changed
