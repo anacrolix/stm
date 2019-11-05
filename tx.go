@@ -103,7 +103,6 @@ func (tx *Tx) reset() {
 }
 
 func (tx *Tx) recycle() {
-	tx.reset()
 	txPool.Put(tx)
 }
 
