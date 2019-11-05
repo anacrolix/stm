@@ -2,19 +2,32 @@ package stmutil
 
 import (
 	"context"
+	"sync"
 
 	"github.com/anacrolix/stm"
 )
 
+var (
+	mu      sync.Mutex
+	ctxVars = map[context.Context]*stm.Var{}
+)
+
 func ContextDoneVar(ctx context.Context) (*stm.Var, func()) {
-	if ctx.Err() != nil {
-		return stm.NewVar(true), func() {}
+	mu.Lock()
+	defer mu.Unlock()
+	if v, ok := ctxVars[ctx]; ok {
+		return v, func() {}
 	}
-	ctx, cancel := context.WithCancel(ctx)
-	_var := stm.NewVar(false)
+	if ctx.Err() != nil {
+		v := stm.NewVar(true)
+		ctxVars[ctx] = v
+		return v, func() {}
+	}
+	v := stm.NewVar(false)
 	go func() {
 		<-ctx.Done()
-		stm.AtomicSet(_var, true)
+		stm.AtomicSet(v, true)
 	}()
-	return _var, cancel
+	ctxVars[ctx] = v
+	return v, func() {}
 }
