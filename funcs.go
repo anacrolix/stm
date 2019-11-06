@@ -26,11 +26,29 @@ func init() {
 	}
 }
 
+func newTx() *Tx {
+	return txPool.Get().(*Tx)
+}
+
+func WouldBlock(fn func(*Tx)) (block bool) {
+	tx := newTx()
+	tx.reset()
+	defer func() {
+		if r := recover(); r == Retry {
+			block = true
+		} else if _, ok := r.(_return); ok {
+		} else if r != nil {
+			panic(r)
+		}
+	}()
+	return catchRetry(fn, tx)
+}
+
 // Atomically executes the atomic function fn.
 func Atomically(fn func(*Tx)) interface{} {
 	expvars.Add("atomically", 1)
 	// run the transaction
-	tx := txPool.Get().(*Tx)
+	tx := newTx()
 retry:
 	tx.reset()
 	var ret interface{}
