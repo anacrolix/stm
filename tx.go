@@ -1,6 +1,7 @@
 package stm
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 	"unsafe"
@@ -140,4 +141,8 @@ func (tx *Tx) unlock() {
 	for _, l := range tx.locks {
 		l.Unlock()
 	}
+}
+
+func (tx *Tx) String() string {
+	return fmt.Sprintf("%[1]T %[1]p", tx)
 }
