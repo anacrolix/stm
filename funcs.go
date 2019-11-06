@@ -105,8 +105,14 @@ func Select(fns ...Operation) Operation {
 		case 1:
 			return fns[0](tx)
 		default:
+			oldWrites := tx.writes
+			tx.writes = make(map[*Var]interface{}, len(oldWrites))
+			for k, v := range oldWrites {
+				tx.writes[k] = v
+			}
 			ret, retry := catchRetry(fns[0], tx)
 			if retry {
+				tx.writes = oldWrites
 				return Select(fns[1:]...)(tx)
 			} else {
 				return ret
