@@ -43,22 +43,22 @@ type gate struct {
 }
 
 func (g gate) pass() {
-	stm.Atomically(func(tx *stm.Tx) {
+	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
 		rem := tx.Get(g.remaining).(int)
 		// wait until gate can hold us
 		tx.Assert(rem > 0)
 		tx.Set(g.remaining, rem-1)
-	})
+	}))
 }
 
 func (g gate) operate() {
 	// open gate, reseting capacity
 	stm.AtomicSet(g.remaining, g.capacity)
 	// wait for gate to be full
-	stm.Atomically(func(tx *stm.Tx) {
+	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
 		rem := tx.Get(g.remaining).(int)
 		tx.Assert(rem == 0)
-	})
+	}))
 }
 
 func newGate(capacity int) gate {
@@ -84,7 +84,7 @@ func newGroup(capacity int) *group {
 }
 
 func (g *group) join() (g1, g2 gate) {
-	stm.Atomically(func(tx *stm.Tx) {
+	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
 		rem := tx.Get(g.remaining).(int)
 		// wait until the group can hold us
 		tx.Assert(rem > 0)
@@ -92,7 +92,7 @@ func (g *group) join() (g1, g2 gate) {
 		// return the group's gates
 		g1 = tx.Get(g.gate1).(gate)
 		g2 = tx.Get(g.gate2).(gate)
-	})
+	}))
 	return
 }
 
@@ -137,11 +137,11 @@ type selection struct {
 	gate1, gate2 gate
 }
 
-func chooseGroup(g *group, task string, s *selection) func(*stm.Tx) {
-	return func(tx *stm.Tx) {
+func chooseGroup(g *group, task string, s *selection) stm.Operation {
+	return stm.VoidOperation(func(tx *stm.Tx) {
 		s.gate1, s.gate2 = g.await(tx)
 		s.task = task
-	}
+	})
 }
 
 func spawnSanta(elves, reindeer *group) {

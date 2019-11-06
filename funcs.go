@@ -30,49 +30,25 @@ func newTx() *Tx {
 	return txPool.Get().(*Tx)
 }
 
-func WouldBlock(fn func(*Tx)) (block bool) {
+func WouldBlock(fn Operation) (block bool) {
 	tx := newTx()
 	tx.reset()
-	defer func() {
-		if r := recover(); r == Retry {
-			block = true
-		} else if _, ok := r.(_return); ok {
-		} else if r != nil {
-			panic(r)
-		}
-	}()
-	return catchRetry(fn, tx)
+	_, block = catchRetry(fn, tx)
+	return
 }
 
 // Atomically executes the atomic function fn.
-func Atomically(fn func(*Tx)) interface{} {
+func Atomically(op Operation) interface{} {
 	expvars.Add("atomically", 1)
 	// run the transaction
 	tx := newTx()
 retry:
 	tx.reset()
-	var ret interface{}
-	if func() (retry bool) {
-		defer func() {
-			r := recover()
-			if r == nil {
-				return
-			}
-			if _ret, ok := r.(_return); ok {
-				expvars.Add("explicit returns", 1)
-				ret = _ret.value
-			} else if r == Retry {
-				expvars.Add("retries", 1)
-				// wait for one of the variables we read to change before retrying
-				tx.wait()
-				retry = true
-			} else {
-				panic(r)
-			}
-		}()
-		fn(tx)
-		return false
-	}() {
+	ret, retry := catchRetry(op, tx)
+	if retry {
+		expvars.Add("retries", 1)
+		// wait for one of the variables we read to change before retrying
+		tx.wait()
 		goto retry
 	}
 	// verify the read log
@@ -107,29 +83,43 @@ func AtomicSet(v *Var, val interface{}) {
 
 // Compose is a helper function that composes multiple transactions into a
 // single transaction.
-func Compose(fns ...func(*Tx)) func(*Tx) {
-	return func(tx *Tx) {
+func Compose(fns ...Operation) Operation {
+	return func(tx *Tx) interface{} {
 		for _, f := range fns {
 			f(tx)
 		}
+		return nil
 	}
 }
 
 // Select runs the supplied functions in order. Execution stops when a
 // function succeeds without calling Retry. If no functions succeed, the
 // entire selection will be retried.
-func Select(fns ...func(*Tx)) func(*Tx) {
-	return func(tx *Tx) {
+func Select(fns ...Operation) Operation {
+	return func(tx *Tx) interface{} {
 		switch len(fns) {
 		case 0:
 			// empty Select blocks forever
 			tx.Retry()
+			panic("unreachable")
 		case 1:
-			fns[0](tx)
+			return fns[0](tx)
 		default:
-			if catchRetry(fns[0], tx) {
-				Select(fns[1:]...)(tx)
+			ret, retry := catchRetry(fns[0], tx)
+			if retry {
+				return Select(fns[1:]...)(tx)
+			} else {
+				return ret
 			}
 		}
+	}
+}
+
+type Operation func(*Tx) interface{}
+
+func VoidOperation(f func(*Tx)) Operation {
+	return func(tx *Tx) interface{} {
+		f(tx)
+		return nil
 	}
 }

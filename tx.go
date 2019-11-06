@@ -84,14 +84,6 @@ func (tx *Tx) Assert(p bool) {
 	}
 }
 
-func (tx *Tx) Return(v interface{}) {
-	panic(_return{v})
-}
-
-type _return struct {
-	value interface{}
-}
-
 func (tx *Tx) reset() {
 	for k := range tx.reads {
 		delete(tx.reads, k)

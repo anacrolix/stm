@@ -26,15 +26,15 @@ func BenchmarkIncrementSTM(b *testing.B) {
 		// spawn 1000 goroutines that each increment x by 1
 		x := NewVar(0)
 		for i := 0; i < 1000; i++ {
-			go Atomically(func(tx *Tx) {
+			go Atomically(VoidOperation(func(tx *Tx) {
 				cur := tx.Get(x).(int)
 				tx.Set(x, cur+1)
-			})
+			}))
 		}
 		// wait for x to reach 1000
-		Atomically(func(tx *Tx) {
+		Atomically(VoidOperation(func(tx *Tx) {
 			tx.Assert(tx.Get(x).(int) == 1000)
-		})
+		}))
 	}
 }
 
