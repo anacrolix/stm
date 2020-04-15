@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/anacrolix/envpprof"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDecrement(t *testing.T) {
@@ -123,17 +124,8 @@ func TestVerify(t *testing.T) {
 }
 
 func TestSelect(t *testing.T) {
-	// empty Select should block forever
-	c := make(chan struct{})
-	go func() {
-		Atomically(Select())
-		c <- struct{}{}
-	}()
-	select {
-	case <-c:
-		t.Fatal("empty Select did not block forever")
-	case <-time.After(10 * time.Millisecond):
-	}
+	// empty Select should panic
+	require.Panics(t, func() { Atomically(Select()) })
 
 	// with one arg, Select adds no effect
 	x := NewVar(2)
@@ -250,3 +242,32 @@ func testPingPong(t testing.TB, n int, afterHit func(string)) {
 func TestPingPong(t *testing.T) {
 	testPingPong(t, 42, func(s string) { t.Log(s) })
 }
+
+func TestSleepingBeauty(t *testing.T) {
+	require.Panics(t, func() {
+		Atomically(func(tx *Tx) interface{} {
+			tx.Assert(false)
+			return nil
+		})
+	})
+}
+
+//func TestRetryStack(t *testing.T) {
+//	v := NewVar(nil)
+//	go func() {
+//		i := 0
+//		for {
+//			AtomicSet(v, i)
+//			i++
+//		}
+//	}()
+//	Atomically(func(tx *Tx) interface{} {
+//		debug.PrintStack()
+//		ret := func() {
+//			defer Atomically(nil)
+//		}
+//		tx.Get(v)
+//		tx.Assert(false)
+//		return ret
+//	})
+//}

@@ -36,6 +36,9 @@ func (tx *Tx) commit() {
 
 // wait blocks until another transaction modifies any of the Vars read by tx.
 func (tx *Tx) wait() {
+	if len(tx.reads) == 0 {
+		panic("not waiting on anything")
+	}
 	for v := range tx.reads {
 		v.watchers.Store(tx, nil)
 	}
