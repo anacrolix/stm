@@ -43,9 +43,14 @@ func (tx *Tx) wait() {
 		v.watchers.Store(tx, nil)
 	}
 	tx.mu.Lock()
+	firstWait := true
 	for tx.verify() {
+		if !firstWait {
+			expvars.Add("wakes for unchanged versions", 1)
+		}
 		expvars.Add("waits", 1)
 		tx.cond.Wait()
+		firstWait=false
 	}
 	tx.mu.Unlock()
 	for v := range tx.reads {
