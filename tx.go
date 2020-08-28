@@ -11,7 +11,7 @@ import (
 type Tx struct {
 	reads  map[*Var]uint64
 	writes map[*Var]interface{}
-	locks  []*sync.Mutex
+	locks  txLocks
 	mu     sync.Mutex
 	cond   sync.Cond
 }
@@ -50,7 +50,7 @@ func (tx *Tx) wait() {
 		}
 		expvars.Add("waits", 1)
 		tx.cond.Wait()
-		firstWait=false
+		firstWait = false
 	}
 	tx.mu.Unlock()
 	for v := range tx.reads {
@@ -115,12 +115,12 @@ func (tx *Tx) lockAllVars() {
 }
 
 func (tx *Tx) resetLocks() {
-	tx.locks = tx.locks[:0]
+	tx.locks.clear()
 }
 
 func (tx *Tx) collectReadLocks() {
 	for v := range tx.reads {
-		tx.locks = append(tx.locks, &v.mu)
+		tx.locks.append(&v.mu)
 	}
 }
 
@@ -128,29 +128,52 @@ func (tx *Tx) collectAllLocks() {
 	tx.collectReadLocks()
 	for v := range tx.writes {
 		if _, ok := tx.reads[v]; !ok {
-			tx.locks = append(tx.locks, &v.mu)
+			tx.locks.append(&v.mu)
 		}
 	}
 }
 
 func (tx *Tx) sortLocks() {
-	sort.Slice(tx.locks, func(i, j int) bool {
-		return uintptr(unsafe.Pointer(tx.locks[i])) < uintptr(unsafe.Pointer(tx.locks[j]))
-	})
+	sort.Sort(tx.locks)
 }
 
 func (tx *Tx) lock() {
-	for _, l := range tx.locks {
+	for _, l := range tx.locks.mus {
 		l.Lock()
 	}
 }
 
 func (tx *Tx) unlock() {
-	for _, l := range tx.locks {
+	for _, l := range tx.locks.mus {
 		l.Unlock()
 	}
 }
 
 func (tx *Tx) String() string {
 	return fmt.Sprintf("%[1]T %[1]p", tx)
+}
+
+// Dedicated type avoids reflection in sort.Slice.
+type txLocks struct {
+	mus []*sync.Mutex
+}
+
+func (me txLocks) Len() int {
+	return len(me.mus)
+}
+
+func (me txLocks) Less(i, j int) bool {
+	return uintptr(unsafe.Pointer(me.mus[i])) < uintptr(unsafe.Pointer(me.mus[j]))
+}
+
+func (me txLocks) Swap(i, j int) {
+	me.mus[i], me.mus[j] = me.mus[j], me.mus[i]
+}
+
+func (me *txLocks) clear() {
+	me.mus = me.mus[:0]
+}
+
+func (me *txLocks) append(mu *sync.Mutex) {
+	me.mus = append(me.mus, mu)
 }
