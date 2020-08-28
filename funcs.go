@@ -9,8 +9,9 @@ var (
 	txPool = sync.Pool{New: func() interface{} {
 		expvars.Add("new txs", 1)
 		tx := &Tx{
-			reads:  make(map[*Var]uint64),
-			writes: make(map[*Var]interface{}),
+			reads:    make(map[*Var]uint64),
+			writes:   make(map[*Var]interface{}),
+			watching: make(map[*Var]struct{}),
 		}
 		tx.cond.L = &tx.mu
 		return tx
