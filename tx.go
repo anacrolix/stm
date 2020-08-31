@@ -15,6 +15,7 @@ type Tx struct {
 	locks    txLocks
 	mu       sync.Mutex
 	cond     sync.Cond
+	tries    int
 }
 
 // Check that none of the logged values have changed since the transaction began.
@@ -35,11 +36,7 @@ func (tx *Tx) commit() {
 	}
 }
 
-// wait blocks until another transaction modifies any of the Vars read by tx.
-func (tx *Tx) wait() {
-	if len(tx.reads) == 0 {
-		panic("not waiting on anything")
-	}
+func (tx *Tx) updateWatchers() {
 	for v := range tx.watching {
 		if _, ok := tx.reads[v]; !ok {
 			delete(tx.watching, v)
@@ -52,6 +49,14 @@ func (tx *Tx) wait() {
 			tx.watching[v] = struct{}{}
 		}
 	}
+}
+
+// wait blocks until another transaction modifies any of the Vars read by tx.
+func (tx *Tx) wait() {
+	if len(tx.reads) == 0 {
+		panic("not waiting on anything")
+	}
+	tx.updateWatchers()
 	tx.mu.Lock()
 	firstWait := true
 	for tx.verify() {
@@ -63,9 +68,6 @@ func (tx *Tx) wait() {
 		firstWait = false
 	}
 	tx.mu.Unlock()
-	//for v := range tx.reads {
-	//	v.watchers.Delete(tx)
-	//}
 }
 
 // Get returns the value of v as of the start of the transaction.

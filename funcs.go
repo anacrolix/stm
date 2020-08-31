@@ -1,8 +1,10 @@
 package stm
 
 import (
+	"math/rand"
 	"runtime/pprof"
 	"sync"
+	"time"
 )
 
 var (
@@ -43,8 +45,21 @@ func Atomically(op Operation) interface{} {
 	expvars.Add("atomically", 1)
 	// run the transaction
 	tx := newTx()
+	tx.tries = 0
 retry:
+	tx.tries++
 	tx.reset()
+	shift := int64(tx.tries - 1)
+	const maxShift = 30
+	if shift > maxShift {
+		shift = maxShift
+	}
+	ns := int64(1) << shift
+	ns = rand.Int63n(ns)
+	if ns > 0 {
+		tx.updateWatchers()
+		time.Sleep(time.Duration(ns))
+	}
 	ret, retry := catchRetry(op, tx)
 	if retry {
 		expvars.Add("retries", 1)
