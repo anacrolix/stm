@@ -205,7 +205,7 @@ func TestAtomicSetRetry(t *testing.T) {
 }
 
 func testPingPong(t testing.TB, n int, afterHit func(string)) {
-	ball := NewVar(false)
+	ball := NewBuiltinEqVar(false)
 	doneVar := NewVar(false)
 	hits := NewVar(0)
 	ready := NewVar(true) // The ball is ready for hitting.

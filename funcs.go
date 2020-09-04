@@ -11,7 +11,7 @@ var (
 	txPool = sync.Pool{New: func() interface{} {
 		expvars.Add("new txs", 1)
 		tx := &Tx{
-			reads:    make(map[*Var]uint64),
+			reads:    make(map[*Var]VarValue),
 			writes:   make(map[*Var]interface{}),
 			watching: make(map[*Var]struct{}),
 		}
@@ -21,7 +21,10 @@ var (
 	failedCommitsProfile *pprof.Profile
 )
 
-const profileFailedCommits = false
+const (
+	profileFailedCommits = false
+	sleepBetweenRetries  = false
+)
 
 func init() {
 	if profileFailedCommits {
@@ -49,16 +52,18 @@ func Atomically(op Operation) interface{} {
 retry:
 	tx.tries++
 	tx.reset()
-	shift := int64(tx.tries - 1)
-	const maxShift = 30
-	if shift > maxShift {
-		shift = maxShift
-	}
-	ns := int64(1) << shift
-	ns = rand.Int63n(ns)
-	if ns > 0 {
-		tx.updateWatchers()
-		time.Sleep(time.Duration(ns))
+	if sleepBetweenRetries {
+		shift := int64(tx.tries - 1)
+		const maxShift = 30
+		if shift > maxShift {
+			shift = maxShift
+		}
+		ns := int64(1) << shift
+		ns = rand.Int63n(ns)
+		if ns > 0 {
+			tx.updateWatchers()
+			time.Sleep(time.Duration(ns))
+		}
 	}
 	ret, retry := catchRetry(op, tx)
 	if retry {
@@ -87,7 +92,7 @@ retry:
 
 // AtomicGet is a helper function that atomically reads a value.
 func AtomicGet(v *Var) interface{} {
-	return v.loadState().val
+	return v.value.Load().(VarValue).Get()
 }
 
 // AtomicSet is a helper function that atomically writes a value.

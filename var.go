@@ -7,18 +7,13 @@ import (
 
 // Holds an STM variable.
 type Var struct {
-	state    atomic.Value
+	value    atomic.Value
 	watchers sync.Map
 	mu       sync.Mutex
 }
 
-func (v *Var) loadState() varSnapshot {
-	return v.state.Load().(varSnapshot)
-}
-
 func (v *Var) changeValue(new interface{}) {
-	version := v.loadState().version
-	v.state.Store(varSnapshot{version: version + 1, val: new})
+	v.value.Store(v.value.Load().(VarValue).Set(new))
 	v.wakeWatchers()
 }
 
@@ -40,6 +35,23 @@ type varSnapshot struct {
 // Returns a new STM variable.
 func NewVar(val interface{}) *Var {
 	v := &Var{}
-	v.state.Store(varSnapshot{version: 0, val: val})
+	v.value.Store(versionedValue{
+		value: val,
+	})
 	return v
+}
+
+func NewCustomVar(val interface{}, changed func(interface{}, interface{}) bool) *Var {
+	v := &Var{}
+	v.value.Store(customVarValue{
+		value:   val,
+		changed: changed,
+	})
+	return v
+}
+
+func NewBuiltinEqVar(val interface{}) *Var {
+	return NewCustomVar(val, func(a, b interface{}) bool {
+		return a != b
+	})
 }

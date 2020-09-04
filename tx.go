@@ -9,7 +9,7 @@ import (
 
 // A Tx represents an atomic transaction.
 type Tx struct {
-	reads    map[*Var]uint64
+	reads    map[*Var]VarValue
 	writes   map[*Var]interface{}
 	watching map[*Var]struct{}
 	locks    txLocks
@@ -20,9 +20,8 @@ type Tx struct {
 
 // Check that none of the logged values have changed since the transaction began.
 func (tx *Tx) verify() bool {
-	for v, version := range tx.reads {
-		changed := v.loadState().version != version
-		if changed {
+	for v, read := range tx.reads {
+		if read.Changed(v.value.Load().(VarValue)) {
 			return false
 		}
 	}
@@ -76,12 +75,13 @@ func (tx *Tx) Get(v *Var) interface{} {
 	if val, ok := tx.writes[v]; ok {
 		return val
 	}
-	state := v.loadState()
 	// If we haven't previously read v, record its version
-	if _, ok := tx.reads[v]; !ok {
-		tx.reads[v] = state.version
+	vv, ok := tx.reads[v]
+	if !ok {
+		vv = v.value.Load().(VarValue)
+		tx.reads[v] = vv
 	}
-	return state.val
+	return vv.Get()
 }
 
 // Set sets the value of a Var for the lifetime of the transaction.

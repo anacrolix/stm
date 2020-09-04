@@ -199,9 +199,9 @@ func BenchmarkThunderingHerdCondVar(b *testing.B) {
 
 func BenchmarkThunderingHerd(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		done := NewVar(false)
-		tokens := NewVar(0)
-		pending := NewVar(0)
+		done := NewBuiltinEqVar(false)
+		tokens := NewBuiltinEqVar(0)
+		pending := NewBuiltinEqVar(0)
 		for range iter.N(1000) {
 			Atomically(VoidOperation(func(tx *Tx) {
 				tx.Set(pending, tx.Get(pending).(int)+1)
