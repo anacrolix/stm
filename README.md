@@ -28,6 +28,9 @@ applications in Go. If you find this package useful, please tell us about it!
 
 ## Examples
 
+Note that `Operation` now returns a value of type `interface{}`, which isn't included in the examples
+throughout the documentation yet. See the type signatures for `Atomically` and `Operation`.
+
 Here's some example code that demonstrates how to perform common operations:
 
 ```go
