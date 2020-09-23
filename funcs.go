@@ -23,7 +23,7 @@ var (
 
 const (
 	profileFailedCommits = false
-	sleepBetweenRetries  = false
+	sleepBetweenRetries  = true
 )
 
 func init() {
@@ -59,8 +59,8 @@ retry:
 			shift = maxShift
 		}
 		ns := int64(1) << shift
-		ns = rand.Int63n(ns)
-		if ns > 0 {
+		d := time.Duration(rand.Int63n(ns))
+		if d > 100*time.Microsecond {
 			tx.updateWatchers()
 			time.Sleep(time.Duration(ns))
 		}
