@@ -74,7 +74,7 @@ retry:
 	}
 	// verify the read log
 	tx.lockAllVars()
-	if !tx.verify() {
+	if tx.inputsChanged() {
 		tx.unlock()
 		expvars.Add("failed commits", 1)
 		if profileFailedCommits {
@@ -84,6 +84,10 @@ retry:
 	}
 	// commit the write log and broadcast that variables have changed
 	tx.commit()
+	tx.mu.Lock()
+	tx.completed = true
+	tx.cond.Broadcast()
+	tx.mu.Unlock()
 	tx.unlock()
 	expvars.Add("commits", 1)
 	tx.recycle()

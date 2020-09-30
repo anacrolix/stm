@@ -32,7 +32,7 @@ func TestDecrement(t *testing.T) {
 	}
 }
 
-// read-only transaction aren't exempt from calling tx.verify
+// read-only transaction aren't exempt from calling tx.inputsChanged
 func TestReadVerify(t *testing.T) {
 	read := make(chan struct{})
 	x, y := NewVar(1), NewVar(2)
@@ -89,7 +89,7 @@ func TestRetry(t *testing.T) {
 }
 
 func TestVerify(t *testing.T) {
-	// tx.verify should check more than pointer equality
+	// tx.inputsChanged should check more than pointer equality
 	type foo struct {
 		i int
 	}
@@ -119,7 +119,7 @@ func TestVerify(t *testing.T) {
 		<-read // wait for other tx to complete
 	}))
 	if i == 3 {
-		t.Fatal("verify did not retry despite modified Var", i)
+		t.Fatal("inputsChanged did not retry despite modified Var", i)
 	}
 }
 

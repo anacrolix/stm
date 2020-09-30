@@ -17,20 +17,22 @@ func (v *Var) changeValue(new interface{}) {
 	newVarValue := old.Set(new)
 	v.value.Store(newVarValue)
 	if old.Changed(newVarValue) {
-		v.wakeWatchers()
+		go v.wakeWatchers(newVarValue)
 	}
 }
 
-func (v *Var) wakeWatchers() {
+func (v *Var) wakeWatchers(new VarValue) {
 	v.watchers.Range(func(k, _ interface{}) bool {
 		tx := k.(*Tx)
-
 		// We have to lock here to ensure that the Tx is waiting before we signal it. Otherwise we
 		// could signal it before it goes to sleep and it will miss the notification.
 		tx.mu.Lock()
 		tx.cond.Broadcast()
+		for !tx.waiting && !tx.completed {
+			tx.cond.Wait()
+		}
 		tx.mu.Unlock()
-		return true
+		return !v.value.Load().(VarValue).Changed(new)
 	})
 }
 
