@@ -23,7 +23,7 @@ var (
 
 const (
 	profileFailedCommits = false
-	sleepBetweenRetries  = true
+	sleepBetweenRetries  = false
 )
 
 func init() {

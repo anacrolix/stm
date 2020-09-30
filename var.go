@@ -13,13 +13,20 @@ type Var struct {
 }
 
 func (v *Var) changeValue(new interface{}) {
-	v.value.Store(v.value.Load().(VarValue).Set(new))
-	v.wakeWatchers()
+	old := v.value.Load().(VarValue)
+	newVarValue := old.Set(new)
+	v.value.Store(newVarValue)
+	if old.Changed(newVarValue) {
+		v.wakeWatchers()
+	}
 }
 
 func (v *Var) wakeWatchers() {
 	v.watchers.Range(func(k, _ interface{}) bool {
 		tx := k.(*Tx)
+
+		// We have to lock here to ensure that the Tx is waiting before we signal it. Otherwise we
+		// could signal it before it goes to sleep and it will miss the notification.
 		tx.mu.Lock()
 		tx.cond.Broadcast()
 		tx.mu.Unlock()
