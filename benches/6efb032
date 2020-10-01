@@ -1,0 +1,18 @@
+goos: darwin
+goarch: amd64
+pkg: github.com/anacrolix/stm
+BenchmarkAtomicGet-12                 	260272291	        14.7 ns/op	       0 B/op	       0 allocs/op
+BenchmarkAtomicSet-12                 	 9419424	       386 ns/op	      32 B/op	       1 allocs/op
+BenchmarkIncrementSTM-12              	    1682	   2711035 ns/op	  782649 B/op	   12175 allocs/op
+BenchmarkIncrementMutex-12            	   13474	    257079 ns/op	      18 B/op	       2 allocs/op
+BenchmarkIncrementChannel-12          	    6813	    580331 ns/op	     125 B/op	       1 allocs/op
+BenchmarkReadVarSTM-12                	   12924	    268537 ns/op	     112 B/op	       3 allocs/op
+BenchmarkReadVarMutex-12              	   13797	    265680 ns/op	      27 B/op	       2 allocs/op
+BenchmarkReadVarChannel-12            	   14151	    257168 ns/op	     112 B/op	       2 allocs/op
+BenchmarkPingPong4-12                 	  397308	      9367 ns/op	    5796 B/op	     116 allocs/op
+BenchmarkPingPong-12                  	  625650	      6469 ns/op	    1489 B/op	      29 allocs/op
+BenchmarkThunderingHerdCondVar-12     	    3400	    901840 ns/op	     187 B/op	       6 allocs/op
+BenchmarkThunderingHerd-12            	     274	  12976135 ns/op	 2783426 B/op	   42759 allocs/op
+BenchmarkInvertedThunderingHerd-12    	     232	  16377186 ns/op	 6113834 B/op	   83333 allocs/op
+PASS
+ok  	github.com/anacrolix/stm	64.875s
