@@ -125,7 +125,7 @@ func (tx *Tx) recycle() {
 		delete(tx.watching, v)
 		v.watchers.Delete(tx)
 	}
-	txPool.Put(tx)
+	//txPool.Put(tx)
 }
 
 func (tx *Tx) lockAllVars() {

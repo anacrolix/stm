@@ -35,6 +35,7 @@ func init() {
 func newTx() *Tx {
 	tx := txPool.Get().(*Tx)
 	tx.tries = 0
+	tx.completed = false
 	return tx
 }
 
