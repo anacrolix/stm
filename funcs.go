@@ -33,13 +33,19 @@ func init() {
 }
 
 func newTx() *Tx {
-	return txPool.Get().(*Tx)
+	tx := txPool.Get().(*Tx)
+	tx.tries = 0
+	return tx
 }
 
 func WouldBlock(fn Operation) (block bool) {
 	tx := newTx()
 	tx.reset()
 	_, block = catchRetry(fn, tx)
+	if len(tx.watching) != 0 {
+		panic("shouldn't have installed any watchers")
+	}
+	tx.recycle()
 	return
 }
 
@@ -48,7 +54,6 @@ func Atomically(op Operation) interface{} {
 	expvars.Add("atomically", 1)
 	// run the transaction
 	tx := newTx()
-	tx.tries = 0
 retry:
 	tx.tries++
 	tx.reset()
