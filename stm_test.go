@@ -223,7 +223,7 @@ func testPingPong(t testing.TB, n int, afterHit func(string)) {
 				tx.Set(ready, false)
 				return false
 			}
-			panic(Retry)
+			return tx.Retry()
 		}).(bool) {
 			afterHit(noise)
 			AtomicSet(ready, true)

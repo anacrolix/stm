@@ -9,15 +9,16 @@ import (
 
 // A Tx represents an atomic transaction.
 type Tx struct {
-	reads     map[*Var]VarValue
-	writes    map[*Var]interface{}
-	watching  map[*Var]struct{}
-	locks     txLocks
-	mu        sync.Mutex
-	cond      sync.Cond
-	waiting   bool
-	completed bool
-	tries     int
+	reads          map[*Var]VarValue
+	writes         map[*Var]interface{}
+	watching       map[*Var]struct{}
+	locks          txLocks
+	mu             sync.Mutex
+	cond           sync.Cond
+	waiting        bool
+	completed      bool
+	tries          int
+	numRetryValues int
 }
 
 // Check that none of the logged values have changed since the transaction began.
@@ -97,9 +98,18 @@ func (tx *Tx) Set(v *Var, val interface{}) {
 	tx.writes[v] = val
 }
 
-// Retry aborts the transaction and retries it when a Var changes.
-func (tx *Tx) Retry() {
-	panic(Retry)
+type txProfileValue struct {
+	*Tx
+	int
+}
+
+// Retry aborts the transaction and retries it when a Var changes. You can return from this method
+// to satisfy return values, but it should never actually return anything as it panics internally.
+func (tx *Tx) Retry() interface{} {
+	retries.Add(txProfileValue{tx, tx.numRetryValues}, 0)
+	tx.numRetryValues++
+	panic(retry)
+	panic("unreachable")
 }
 
 // Assert is a helper function that retries a transaction if the condition is
@@ -117,7 +127,15 @@ func (tx *Tx) reset() {
 	for k := range tx.writes {
 		delete(tx.writes, k)
 	}
+	tx.removeRetryProfiles()
 	tx.resetLocks()
+}
+
+func (tx *Tx) removeRetryProfiles() {
+	for tx.numRetryValues > 0 {
+		tx.numRetryValues--
+		retries.Remove(txProfileValue{tx, tx.numRetryValues})
+	}
 }
 
 func (tx *Tx) recycle() {
