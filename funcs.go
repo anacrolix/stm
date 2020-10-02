@@ -71,7 +71,9 @@ retry:
 			time.Sleep(time.Duration(ns))
 		}
 	}
+	tx.mu.Lock()
 	ret, retry := catchRetry(op, tx)
+	tx.mu.Unlock()
 	if retry {
 		expvars.Add("retries", 1)
 		// wait for one of the variables we read to change before retrying

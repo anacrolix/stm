@@ -27,9 +27,11 @@ func (v *Var) wakeWatchers(new VarValue) {
 		// We have to lock here to ensure that the Tx is waiting before we signal it. Otherwise we
 		// could signal it before it goes to sleep and it will miss the notification.
 		tx.mu.Lock()
-		tx.cond.Broadcast()
-		for !tx.waiting && !tx.completed {
-			tx.cond.Wait()
+		if read := tx.reads[v]; read != nil && read.Changed(new) {
+			tx.cond.Broadcast()
+			for !tx.waiting && !tx.completed {
+				tx.cond.Wait()
+			}
 		}
 		tx.mu.Unlock()
 		return !v.value.Load().(VarValue).Changed(new)

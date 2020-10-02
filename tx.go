@@ -121,12 +121,14 @@ func (tx *Tx) Assert(p bool) {
 }
 
 func (tx *Tx) reset() {
+	tx.mu.Lock()
 	for k := range tx.reads {
 		delete(tx.reads, k)
 	}
 	for k := range tx.writes {
 		delete(tx.writes, k)
 	}
+	tx.mu.Unlock()
 	tx.removeRetryProfiles()
 	tx.resetLocks()
 }
