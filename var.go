@@ -6,13 +6,25 @@ import (
 )
 
 // Holds an STM variable.
-type Var struct {
+type Var [T any]struct {
 	value    atomic.Value
 	watchers sync.Map
 	mu       sync.Mutex
 }
 
-func (v *Var) changeValue(new interface{}) {
+func (v *Var[T]) getValue() *atomic.Value{
+	return &v.value
+}
+
+func (v *Var[T]) getWatchers() *sync.Map{
+	return &v.watchers
+}
+
+func (v *Var[T]) getLock() *sync.Mutex {
+	return &v.mu
+}
+
+func (v *Var[T]) changeValue(new interface{}) {
 	old := v.value.Load().(VarValue)
 	newVarValue := old.Set(new)
 	v.value.Store(newVarValue)
@@ -21,7 +33,7 @@ func (v *Var) changeValue(new interface{}) {
 	}
 }
 
-func (v *Var) wakeWatchers(new VarValue) {
+func (v *Var[T]) wakeWatchers(new VarValue) {
 	v.watchers.Range(func(k, _ interface{}) bool {
 		tx := k.(*Tx)
 		// We have to lock here to ensure that the Tx is waiting before we signal it. Otherwise we
@@ -44,16 +56,16 @@ type varSnapshot struct {
 }
 
 // Returns a new STM variable.
-func NewVar(val interface{}) *Var {
-	v := &Var{}
+func NewVar[T any](val T) *Var[T] {
+	v := &Var[T]{}
 	v.value.Store(versionedValue{
 		value: val,
 	})
 	return v
 }
 
-func NewCustomVar(val interface{}, changed func(interface{}, interface{}) bool) *Var {
-	v := &Var{}
+func NewCustomVar[T any](val T, changed func(T, T) bool) *Var[T] {
+	v := &Var[T]{}
 	v.value.Store(customVarValue{
 		value:   val,
 		changed: changed,
@@ -61,8 +73,8 @@ func NewCustomVar(val interface{}, changed func(interface{}, interface{}) bool) 
 	return v
 }
 
-func NewBuiltinEqVar(val interface{}) *Var {
-	return NewCustomVar(val, func(a, b interface{}) bool {
+func NewBuiltinEqVar[T any](val T) *Var[T] {
+	return NewCustomVar(val, func(a, b T) bool {
 		return a != b
 	})
 }
