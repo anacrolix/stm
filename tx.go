@@ -106,7 +106,7 @@ type txProfileValue struct {
 // Retry aborts the transaction and retries it when a Var changes. You can return from this method
 // to satisfy return values, but it should never actually return anything as it panics internally.
 func (tx *Tx) Retry() interface{} {
-	retries.Add(txProfileValue{tx, tx.numRetryValues}, 0)
+	retries.Add(txProfileValue{tx, tx.numRetryValues}, 1)
 	tx.numRetryValues++
 	panic(retry)
 	panic("unreachable")
