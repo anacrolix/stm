@@ -145,6 +145,9 @@ func (tx *Tx) recycle() {
 		delete(tx.watching, v)
 		v.watchers.Delete(tx)
 	}
+	tx.removeRetryProfiles()
+	// I don't think we can reuse Txs, because the "completed" field should/needs to be set
+	// indefinitely after use.
 	//txPool.Put(tx)
 }
 
