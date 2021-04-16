@@ -12,11 +12,11 @@ type Var [T any]struct {
 	mu       sync.Mutex
 }
 
-func (v *Var[T]) getValue() *atomic.Value{
+func (v *Var[T]) getValue() *atomic.Value {
 	return &v.value
 }
 
-func (v *Var[T]) getWatchers() *sync.Map{
+func (v *Var[T]) getWatchers() *sync.Map {
 	return &v.watchers
 }
 
@@ -66,14 +66,14 @@ func NewVar[T any](val T) *Var[T] {
 
 func NewCustomVar[T any](val T, changed func(T, T) bool) *Var[T] {
 	v := &Var[T]{}
-	v.value.Store(customVarValue{
+	v.value.Store(customVarValue[T]{
 		value:   val,
 		changed: changed,
 	})
 	return v
 }
 
-func NewBuiltinEqVar[T any](val T) *Var[T] {
+func NewBuiltinEqVar[T comparable](val T) *Var[T] {
 	return NewCustomVar(val, func(a, b T) bool {
 		return a != b
 	})
