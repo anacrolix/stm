@@ -1,6 +1,7 @@
 # stm
 
-[![GoDoc](https://godoc.org/github.com/anacrolix/stm?status.svg)](https://godoc.org/github.com/anacrolix/stm) [![Go Report Card](https://goreportcard.com/badge/github.com/anacrolix/stm)](https://goreportcard.com/report/github.com/anacrolix/stm)
+[![Go Reference](https://pkg.go.dev/badge/github.com/anacrolix/stm.svg)](https://pkg.go.dev/github.com/anacrolix/stm)
+[![Go Report Card](https://goreportcard.com/badge/github.com/anacrolix/stm)](https://goreportcard.com/report/github.com/anacrolix/stm)
 
 Package `stm` provides [Software Transactional Memory](https://en.wikipedia.org/wiki/Software_transactional_memory) operations for Go. This is
 an alternative to the standard way of writing concurrent code (channels and
