@@ -13,9 +13,9 @@ import (
 type numTokens = int
 
 type Limiter struct {
-	max     *stm.Var
-	cur     *stm.Var
-	lastAdd *stm.Var
+	max     *stm.Var[numTokens]
+	cur     *stm.Var[numTokens]
+	lastAdd *stm.Var[time.Time]
 	rate    Limit
 }
 
@@ -49,7 +49,7 @@ func NewLimiter(rate Limit, burst numTokens) *Limiter {
 
 func (rl *Limiter) tokenGenerator(interval time.Duration) {
 	for {
-		lastAdd := stm.AtomicGet(rl.lastAdd).(time.Time)
+		lastAdd := stm.AtomicGet(rl.lastAdd)
 		time.Sleep(time.Until(lastAdd.Add(interval)))
 		now := time.Now()
 		available := numTokens(now.Sub(lastAdd) / interval)

@@ -39,7 +39,7 @@ import (
 
 type gate struct {
 	capacity  int
-	remaining *stm.Var
+	remaining *stm.Var[int]
 }
 
 func (g gate) pass() {
@@ -70,8 +70,8 @@ func newGate(capacity int) gate {
 
 type group struct {
 	capacity     int
-	remaining    *stm.Var
-	gate1, gate2 *stm.Var
+	remaining    *stm.Var[int]
+	gate1, gate2 *stm.Var[gate]
 }
 
 func newGroup(capacity int) *group {
