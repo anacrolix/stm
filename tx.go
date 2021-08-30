@@ -15,7 +15,6 @@ type txVar interface {
 	getLock() *sync.Mutex
 }
 
-
 // A Tx represents an atomic transaction.
 type Tx struct {
 	reads          map[txVar]VarValue

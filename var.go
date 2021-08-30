@@ -6,7 +6,7 @@ import (
 )
 
 // Holds an STM variable.
-type Var [T any]struct {
+type Var[T any] struct {
 	value    atomic.Value
 	watchers sync.Map
 	mu       sync.Mutex

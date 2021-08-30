@@ -44,10 +44,10 @@ type gate struct {
 
 func (g gate) pass() {
 	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-		rem := tx.Get(g.remaining).(int)
+		rem := g.remaining.Get(tx)
 		// wait until gate can hold us
 		tx.Assert(rem > 0)
-		tx.Set(g.remaining, rem-1)
+		g.remaining.Set(tx, rem-1)
 	}))
 }
 
@@ -56,7 +56,7 @@ func (g gate) operate() {
 	stm.AtomicSet(g.remaining, g.capacity)
 	// wait for gate to be full
 	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-		rem := tx.Get(g.remaining).(int)
+		rem := g.remaining.Get(tx)
 		tx.Assert(rem == 0)
 	}))
 }
@@ -85,28 +85,28 @@ func newGroup(capacity int) *group {
 
 func (g *group) join() (g1, g2 gate) {
 	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-		rem := tx.Get(g.remaining).(int)
+		rem := g.remaining.Get(tx)
 		// wait until the group can hold us
 		tx.Assert(rem > 0)
-		tx.Set(g.remaining, rem-1)
+		g.remaining.Set(tx, rem-1)
 		// return the group's gates
-		g1 = tx.Get(g.gate1).(gate)
-		g2 = tx.Get(g.gate2).(gate)
+		g1 = g.gate1.Get(tx)
+		g2 = g.gate2.Get(tx)
 	}))
 	return
 }
 
 func (g *group) await(tx *stm.Tx) (gate, gate) {
 	// wait for group to be empty
-	rem := tx.Get(g.remaining).(int)
+	rem := g.remaining.Get(tx)
 	tx.Assert(rem == 0)
 	// get the group's gates
-	g1 := tx.Get(g.gate1).(gate)
-	g2 := tx.Get(g.gate2).(gate)
+	g1 := g.gate1.Get(tx)
+	g2 := g.gate2.Get(tx)
 	// reset group
-	tx.Set(g.remaining, g.capacity)
-	tx.Set(g.gate1, newGate(g.capacity))
-	tx.Set(g.gate2, newGate(g.capacity))
+	g.remaining.Set(tx, g.capacity)
+	g.gate1.Set(tx, newGate(g.capacity))
+	g.gate2.Set(tx, newGate(g.capacity))
 	return g1, g2
 }
 
