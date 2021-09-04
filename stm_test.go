@@ -125,7 +125,7 @@ func TestVerify(t *testing.T) {
 
 func TestSelect(t *testing.T) {
 	// empty Select should panic
-	require.Panics(t, func() { Atomically(Select()) })
+	require.Panics(t, func() { Atomically(Select[struct{}]()) })
 
 	// with one arg, Select adds no effect
 	x := NewVar(2)
@@ -135,26 +135,27 @@ func TestSelect(t *testing.T) {
 
 	picked := Atomically(Select(
 		// always blocks; should never be selected
-		VoidOperation(func(tx *Tx) {
+		func(tx *Tx)int {
 			tx.Retry()
-		}),
+			panic("unreachable")
+		},
 		// always succeeds; should always be selected
-		func(tx *Tx) interface{} {
+		func(tx *Tx) int {
 			return 2
 		},
 		// always succeeds; should never be selected
-		func(tx *Tx) interface{} {
+		func(tx *Tx) int {
 			return 3
 		},
-	)).(int)
+	))
 	assert.EqualValues(t, 2, picked)
 }
 
 func TestCompose(t *testing.T) {
 	nums := make([]int, 100)
-	fns := make([]Operation, 100)
+	fns := make([]Operation[struct{}], 100)
 	for i := range fns {
-		fns[i] = func(x int) Operation {
+		fns[i] = func(x int) Operation[struct{}] {
 			return VoidOperation(func(*Tx) { nums[x] = x })
 		}(i) // capture loop var
 	}
