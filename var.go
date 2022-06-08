@@ -51,13 +51,8 @@ func (v *Var[T]) wakeWatchers(new VarValue) {
 	})
 }
 
-type varSnapshot struct {
-	val     interface{}
-	version uint64
-}
-
 // Returns a new STM variable.
-func NewVar[T any](val interface{}) *Var[T] {
+func NewVar[T any](val T) *Var[T] {
 	v := &Var[T]{}
 	v.value.Store(versionedValue{
 		value: val,
