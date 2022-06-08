@@ -2,7 +2,6 @@ package stm
 
 import (
 	"math/rand"
-	"reflect"
 	"runtime/pprof"
 	"sync"
 	"time"
@@ -12,9 +11,9 @@ var (
 	txPool = sync.Pool{New: func() interface{} {
 		expvars.Add("new txs", 1)
 		tx := &Tx{
-			reads:    make(map[*Var]VarValue),
-			writes:   make(map[*Var]interface{}),
-			watching: make(map[*Var]struct{}),
+			reads:    make(map[txVar]VarValue),
+			writes:   make(map[txVar]interface{}),
+			watching: make(map[txVar]struct{}),
 		}
 		tx.cond.L = &tx.mu
 		return tx
@@ -104,12 +103,12 @@ retry:
 }
 
 // AtomicGet is a helper function that atomically reads a value.
-func AtomicGet(v *Var) interface{} {
-	return v.value.Load().Get()
+func AtomicGet[T any](v *Var[T]) T {
+	return v.value.Load().Get().(T)
 }
 
 // AtomicSet is a helper function that atomically writes a value.
-func AtomicSet(v *Var, val interface{}) {
+func AtomicSet[T any](v *Var[T], val interface{}) {
 	v.mu.Lock()
 	v.changeValue(val)
 	v.mu.Unlock()
@@ -140,7 +139,7 @@ func Select(fns ...Operation) Operation {
 			return fns[0](tx)
 		default:
 			oldWrites := tx.writes
-			tx.writes = make(map[*Var]interface{}, len(oldWrites))
+			tx.writes = make(map[txVar]interface{}, len(oldWrites))
 			for k, v := range oldWrites {
 				tx.writes[k] = v
 			}
@@ -164,14 +163,8 @@ func VoidOperation(f func(*Tx)) Operation {
 	}
 }
 
-func AtomicModify(v *Var, f interface{}) {
-	r := reflect.ValueOf(f)
+func AtomicModify[T any](v *Var[T], f func(T) T) {
 	Atomically(VoidOperation(func(tx *Tx) {
-		cur := reflect.ValueOf(tx.Get(v))
-		out := r.Call([]reflect.Value{cur})
-		if lenOut := len(out); lenOut != 1 {
-			panic(lenOut)
-		}
-		tx.Set(v, out[0].Interface())
+		v.Set(tx, f(v.Get(tx)))
 	}))
 }

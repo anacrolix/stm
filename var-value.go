@@ -28,24 +28,24 @@ func (me versionedValue) Changed(other VarValue) bool {
 	return me.version != other.(versionedValue).version
 }
 
-type customVarValue struct {
-	value   interface{}
-	changed func(interface{}, interface{}) bool
+type customVarValue[T any] struct {
+	value   T
+	changed func(T, T) bool
 }
 
-var _ VarValue = customVarValue{}
+var _ VarValue = customVarValue[struct{}]{}
 
-func (me customVarValue) Changed(other VarValue) bool {
-	return me.changed(me.value, other.(customVarValue).value)
+func (me customVarValue[T]) Changed(other VarValue) bool {
+	return me.changed(me.value, other.(customVarValue[T]).value)
 }
 
-func (me customVarValue) Set(newValue interface{}) VarValue {
-	return customVarValue{
-		value:   newValue,
+func (me customVarValue[T]) Set(newValue interface{}) VarValue {
+	return customVarValue[T]{
+		value:   newValue.(T),
 		changed: me.changed,
 	}
 }
 
-func (me customVarValue) Get() interface{} {
+func (me customVarValue[T]) Get() interface{} {
 	return me.value
 }

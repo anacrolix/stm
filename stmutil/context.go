@@ -9,12 +9,12 @@ import (
 
 var (
 	mu      sync.Mutex
-	ctxVars = map[context.Context]*stm.Var{}
+	ctxVars = map[context.Context]*stm.Var[bool]{}
 )
 
 // Returns an STM var that contains a bool equal to `ctx.Err != nil`, and a cancel function to be
 // called when the user is no longer interested in the var.
-func ContextDoneVar(ctx context.Context) (*stm.Var, func()) {
+func ContextDoneVar(ctx context.Context) (*stm.Var[bool], func()) {
 	mu.Lock()
 	defer mu.Unlock()
 	if v, ok := ctxVars[ctx]; ok {
@@ -26,7 +26,7 @@ func ContextDoneVar(ctx context.Context) (*stm.Var, func()) {
 		v := stm.NewBuiltinEqVar(true)
 		return v, func() {}
 	}
-	v := stm.NewVar(false)
+	v := stm.NewVar[bool](false)
 	go func() {
 		<-ctx.Done()
 		stm.AtomicSet(v, true)

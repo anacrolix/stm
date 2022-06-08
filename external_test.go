@@ -63,14 +63,14 @@ func BenchmarkThunderingHerd(b *testing.B) {
 		pending := stm.NewBuiltinEqVar(0)
 		for range iter.N(1000) {
 			stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-				tx.Set(pending, tx.Get(pending).(int)+1)
+				pending.Set(tx, pending.Get(tx)+1)
 			}))
 			go func() {
 				stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-					t := tx.Get(tokens).(int)
+					t := tokens.Get(tx)
 					if t > 0 {
-						tx.Set(tokens, t-1)
-						tx.Set(pending, tx.Get(pending).(int)-1)
+						tokens.Set(tx, t-1)
+						pending.Set(tx, pending.Get(tx)-1)
 					} else {
 						tx.Retry()
 					}
@@ -79,17 +79,17 @@ func BenchmarkThunderingHerd(b *testing.B) {
 		}
 		go func() {
 			for stm.Atomically(func(tx *stm.Tx) interface{} {
-				if tx.Get(done).(bool) {
+				if done.Get(tx) {
 					return false
 				}
-				tx.Assert(tx.Get(tokens).(int) < maxTokens)
-				tx.Set(tokens, tx.Get(tokens).(int)+1)
+				tx.Assert(tokens.Get(tx) < maxTokens)
+				tokens.Set(tx, tokens.Get(tx)+1)
 				return true
 			}).(bool) {
 			}
 		}()
 		stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-			tx.Assert(tx.Get(pending).(int) == 0)
+			tx.Assert(pending.Get(tx) == 0)
 		}))
 		stm.AtomicSet(done, true)
 	}
@@ -99,53 +99,53 @@ func BenchmarkInvertedThunderingHerd(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		done := stm.NewBuiltinEqVar(false)
 		tokens := stm.NewBuiltinEqVar(0)
-		pending := stm.NewVar(stmutil.NewSet())
+		pending := stm.NewVar[stmutil.Settish](stmutil.NewSet())
 		for range iter.N(1000) {
-			ready := stm.NewVar(false)
+			ready := stm.NewVar[bool](false)
 			stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-				tx.Set(pending, tx.Get(pending).(stmutil.Settish).Add(ready))
+				pending.Set(tx, pending.Get(tx).Add(ready))
 			}))
 			go func() {
 				stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-					tx.Assert(tx.Get(ready).(bool))
-					set := tx.Get(pending).(stmutil.Settish)
+					tx.Assert(ready.Get(tx))
+					set := pending.Get(tx)
 					if !set.Contains(ready) {
 						panic("couldn't find ourselves in pending")
 					}
-					tx.Set(pending, set.Delete(ready))
+					pending.Set(tx, set.Delete(ready))
 				}))
 				//b.Log("waiter finished")
 			}()
 		}
 		go func() {
 			for stm.Atomically(func(tx *stm.Tx) interface{} {
-				if tx.Get(done).(bool) {
+				if done.Get(tx) {
 					return false
 				}
-				tx.Assert(tx.Get(tokens).(int) < maxTokens)
-				tx.Set(tokens, tx.Get(tokens).(int)+1)
+				tx.Assert(tokens.Get(tx) < maxTokens)
+				tokens.Set(tx, tokens.Get(tx)+1)
 				return true
 			}).(bool) {
 			}
 		}()
 		go func() {
 			for stm.Atomically(func(tx *stm.Tx) interface{} {
-				tx.Assert(tx.Get(tokens).(int) > 0)
-				tx.Set(tokens, tx.Get(tokens).(int)-1)
-				tx.Get(pending).(stmutil.Settish).Range(func(i interface{}) bool {
-					ready := i.(*stm.Var)
-					if !tx.Get(ready).(bool) {
-						tx.Set(ready, true)
+				tx.Assert(tokens.Get(tx) > 0)
+				tokens.Set(tx, tokens.Get(tx)-1)
+				pending.Get(tx).Range(func(i interface{}) bool {
+					ready := i.(*stm.Var[bool])
+					if !ready.Get(tx) {
+						ready.Set(tx, true)
 						return false
 					}
 					return true
 				})
-				return !tx.Get(done).(bool)
+				return !done.Get(tx)
 			}).(bool) {
 			}
 		}()
 		stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-			tx.Assert(tx.Get(pending).(stmutil.Lenner).Len() == 0)
+			tx.Assert(pending.Get(tx).(stmutil.Lenner).Len() == 0)
 		}))
 		stm.AtomicSet(done, true)
 	}

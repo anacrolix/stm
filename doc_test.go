@@ -6,43 +6,43 @@ import (
 
 func Example() {
 	// create a shared variable
-	n := stm.NewVar(3)
+	n := stm.NewVar[int](3)
 
 	// read a variable
 	var v int
 	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-		v = tx.Get(n).(int)
+		v = n.Get(tx)
 	}))
 	// or:
-	v = stm.AtomicGet(n).(int)
+	v = stm.AtomicGet(n)
 	_ = v
 
 	// write to a variable
 	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-		tx.Set(n, 12)
+		n.Set(tx, 12)
 	}))
 	// or:
 	stm.AtomicSet(n, 12)
 
 	// update a variable
 	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-		cur := tx.Get(n).(int)
-		tx.Set(n, cur-1)
+		cur := n.Get(tx)
+		n.Set(tx, cur-1)
 	}))
 
 	// block until a condition is met
 	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-		cur := tx.Get(n).(int)
+		cur := n.Get(tx)
 		if cur != 0 {
 			tx.Retry()
 		}
-		tx.Set(n, 10)
+		n.Set(tx, 10)
 	}))
 	// or:
 	stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-		cur := tx.Get(n).(int)
+		cur := n.Get(tx)
 		tx.Assert(cur == 0)
-		tx.Set(n, 10)
+		n.Set(tx, 10)
 	}))
 
 	// select among multiple (potentially blocking) transactions
@@ -51,11 +51,11 @@ func Example() {
 		stm.VoidOperation(func(tx *stm.Tx) { tx.Retry() }),
 
 		// this function will always succeed without blocking
-		stm.VoidOperation(func(tx *stm.Tx) { tx.Set(n, 10) }),
+		stm.VoidOperation(func(tx *stm.Tx) { n.Set(tx, 10) }),
 
 		// this function will never run, because the previous
 		// function succeeded
-		stm.VoidOperation(func(tx *stm.Tx) { tx.Set(n, 11) }),
+		stm.VoidOperation(func(tx *stm.Tx) { n.Set(tx, 11) }),
 	))
 
 	// since Select is a normal transaction, if the entire select retries

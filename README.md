@@ -42,11 +42,11 @@ Be very careful when managing pointers inside transactions! (This includes
 slices, maps, channels, and captured variables.) Here's why:
 
 ```go
-p := stm.NewVar([]byte{1,2,3})
+p := stm.NewVar[[]byte]([]byte{1,2,3})
 stm.Atomically(func(tx *stm.Tx) {
-	b := tx.Get(p).([]byte)
+	b := p.Get(tx)
 	b[0] = 7
-	tx.Set(p, b)
+	stm.p.Set(tx, b)
 })
 ```
 
@@ -57,11 +57,11 @@ Following this advice, we can rewrite the transaction to perform a copy:
 
 ```go
 stm.Atomically(func(tx *stm.Tx) {
-	b := tx.Get(p).([]byte)
+	b := p.Get(tx)
 	c := make([]byte, len(b))
 	copy(c, b)
 	c[0] = 7
-	tx.Set(p, c)
+	p.Set(tx, c)
 })
 ```
 
@@ -73,11 +73,11 @@ In the same vein, it would be a mistake to do this:
 type foo struct {
 	i int
 }
-p := stm.NewVar(&foo{i: 2})
+p := stm.NewVar[*foo](&foo{i: 2})
 stm.Atomically(func(tx *stm.Tx) {
-	f := tx.Get(p).(*foo)
+	f := p.Get(tx)
 	f.i = 7
-	tx.Set(p, f)
+	stm.p.Set(tx, f)
 })
 ```
 
@@ -88,11 +88,11 @@ the correct approach is to move the `Var` inside the struct:
 type foo struct {
 	i *stm.Var
 }
-f := foo{i: stm.NewVar(2)}
+f := foo{i: stm.NewVar[int](2)}
 stm.Atomically(func(tx *stm.Tx) {
-	i := tx.Get(f.i).(int)
+	i := f.i.Get(tx).(int)
 	i = 7
-	tx.Set(f.i, i)
+	f.i.Set(tx, i)
 })
 ```
 
