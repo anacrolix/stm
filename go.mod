@@ -1,6 +1,6 @@
 module github.com/anacrolix/stm
 
-go 1.13
+go 1.18
 
 require (
 	github.com/anacrolix/envpprof v1.0.0
