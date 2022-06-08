@@ -78,14 +78,14 @@ func BenchmarkThunderingHerd(b *testing.B) {
 			}()
 		}
 		go func() {
-			for stm.Atomically(func(tx *stm.Tx) interface{} {
+			for stm.Atomically(func(tx *stm.Tx) bool {
 				if done.Get(tx) {
 					return false
 				}
 				tx.Assert(tokens.Get(tx) < maxTokens)
 				tokens.Set(tx, tokens.Get(tx)+1)
 				return true
-			}).(bool) {
+			}) {
 			}
 		}()
 		stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
@@ -118,18 +118,18 @@ func BenchmarkInvertedThunderingHerd(b *testing.B) {
 			}()
 		}
 		go func() {
-			for stm.Atomically(func(tx *stm.Tx) interface{} {
+			for stm.Atomically(func(tx *stm.Tx) bool {
 				if done.Get(tx) {
 					return false
 				}
 				tx.Assert(tokens.Get(tx) < maxTokens)
 				tokens.Set(tx, tokens.Get(tx)+1)
 				return true
-			}).(bool) {
+			}) {
 			}
 		}()
 		go func() {
-			for stm.Atomically(func(tx *stm.Tx) interface{} {
+			for stm.Atomically(func(tx *stm.Tx) bool {
 				tx.Assert(tokens.Get(tx) > 0)
 				tokens.Set(tx, tokens.Get(tx)-1)
 				pending.Get(tx).Range(func(i interface{}) bool {
@@ -141,7 +141,7 @@ func BenchmarkInvertedThunderingHerd(b *testing.B) {
 					return true
 				})
 				return !done.Get(tx)
-			}).(bool) {
+			}) {
 			}
 		}()
 		stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {

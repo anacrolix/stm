@@ -77,9 +77,9 @@ func (rl *Limiter) Allow() bool {
 }
 
 func (rl *Limiter) AllowN(n numTokens) bool {
-	return stm.Atomically(func(tx *stm.Tx) interface{} {
+	return stm.Atomically(func(tx *stm.Tx) bool {
 		return rl.takeTokens(tx, n)
-	}).(bool)
+	})
 }
 
 func (rl *Limiter) AllowStm(tx *stm.Tx) bool {
@@ -105,7 +105,7 @@ func (rl *Limiter) Wait(ctx context.Context) error {
 func (rl *Limiter) WaitN(ctx context.Context, n int) error {
 	ctxDone, cancel := stmutil.ContextDoneVar(ctx)
 	defer cancel()
-	if err := stm.Atomically(func(tx *stm.Tx) interface{} {
+	if err := stm.Atomically(func(tx *stm.Tx) error {
 		if ctxDone.Get(tx) {
 			return ctx.Err()
 		}
@@ -123,7 +123,7 @@ func (rl *Limiter) WaitN(ctx context.Context, n int) error {
 		tx.Retry()
 		panic("unreachable")
 	}); err != nil {
-		return err.(error)
+		return err
 	}
 	return nil
 

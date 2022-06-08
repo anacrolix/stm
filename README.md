@@ -89,7 +89,7 @@ type foo struct {
 }
 f := foo{i: stm.NewVar[int](2)}
 stm.Atomically(func(tx *stm.Tx) {
-	i := f.i.Get(tx).(int)
+	i := f.i.Get(tx)
 	i = 7
 	f.i.Set(tx, i)
 })
