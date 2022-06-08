@@ -12,10 +12,9 @@ composition will either deadlock or release the lock between functions (making
 it non-atomic).
 
 The `stm` API tries to mimic that of Haskell's [`Control.Concurrent.STM`](https://hackage.haskell.org/package/stm-2.4.4.1/docs/Control-Concurrent-STM.html), but
-this is not entirely possible due to Go's type system; we are forced to use
-`interface{}` and type assertions. Furthermore, Haskell can enforce at compile
-time that STM variables are not modified outside the STM monad. This is not
-possible in Go, so be especially careful when using pointers in your STM code.
+Haskell can enforce at compile time that STM variables are not modified outside
+the STM monad. This is not possible in Go, so be especially careful when using
+pointers in your STM code. Remember: modifying a pointer is a side effect!
 
 Unlike Haskell, data in Go is not immutable by default, which means you have
 to be careful when using STM to manage pointers. If two goroutines have access
@@ -31,7 +30,7 @@ applications in Go. If you find this package useful, please tell us about it!
 
 See the package examples in the Go package docs for examples of common operations.
 
-See [example_santa_test.go](example_santa_test.go) for a more complex example.
+See [cmd/santa-example/main.go](cmd/santa-example/main.go) for a more complex example.
 
 ## Pointers
 

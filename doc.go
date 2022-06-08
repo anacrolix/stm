@@ -69,11 +69,9 @@ behavior. One common way to get around this is to build up a list of impure
 operations inside the transaction, and then perform them after the transaction
 completes.
 
-The stm API tries to mimic that of Haskell's Control.Concurrent.STM, but this
-is not entirely possible due to Go's type system; we are forced to use
-interface{} and type assertions. Furthermore, Haskell can enforce at compile
-time that STM variables are not modified outside the STM monad. This is not
-possible in Go, so be especially careful when using pointers in your STM code.
-Remember: modifying a pointer is a side effect!
+The stm API tries to mimic that of Haskell's Control.Concurrent.STM, but
+Haskell can enforce at compile time that STM variables are not modified outside
+the STM monad. This is not possible in Go, so be especially careful when using
+pointers in your STM code. Remember: modifying a pointer is a side effect!
 */
 package stm
