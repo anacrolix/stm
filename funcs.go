@@ -8,11 +8,11 @@ import (
 )
 
 var (
-	txPool = sync.Pool{New: func() interface{} {
+	txPool = sync.Pool{New: func() any {
 		expvars.Add("new txs", 1)
 		tx := &Tx{
 			reads:    make(map[txVar]VarValue),
-			writes:   make(map[txVar]interface{}),
+			writes:   make(map[txVar]any),
 			watching: make(map[txVar]struct{}),
 		}
 		tx.cond.L = &tx.mu
@@ -138,7 +138,7 @@ func Select[R any](fns ...Operation[R]) Operation[R] {
 			return fns[0](tx)
 		default:
 			oldWrites := tx.writes
-			tx.writes = make(map[txVar]interface{}, len(oldWrites))
+			tx.writes = make(map[txVar]any, len(oldWrites))
 			for k, v := range oldWrites {
 				tx.writes[k] = v
 			}

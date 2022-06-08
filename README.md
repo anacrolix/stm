@@ -34,7 +34,7 @@ See [cmd/santa-example/main.go](cmd/santa-example/main.go) for a more complex ex
 
 ## Pointers
 
-Note that `Operation` now returns a value of type `interface{}`, which isn't included in the
+Note that `Operation` now returns a value of type `any`, which isn't included in the
 examples throughout the documentation yet. See the type signatures for `Atomically` and `Operation`.
 
 Be very careful when managing pointers inside transactions! (This includes

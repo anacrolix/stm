@@ -170,7 +170,7 @@ func TestCompose(t *testing.T) {
 func TestPanic(t *testing.T) {
 	// normal panics should escape Atomically
 	assert.PanicsWithValue(t, "foo", func() {
-		Atomically(func(*Tx) interface{} {
+		Atomically(func(*Tx) any {
 			panic("foo")
 		})
 	})
@@ -213,7 +213,7 @@ func testPingPong(t testing.TB, n int, afterHit func(string)) {
 	var wg sync.WaitGroup
 	bat := func(from, to bool, noise string) {
 		defer wg.Done()
-		for !Atomically(func(tx *Tx) interface{} {
+		for !Atomically(func(tx *Tx) any {
 			if doneVar.Get(tx) {
 				return true
 			}
@@ -246,7 +246,7 @@ func TestPingPong(t *testing.T) {
 
 func TestSleepingBeauty(t *testing.T) {
 	require.Panics(t, func() {
-		Atomically(func(tx *Tx) interface{} {
+		Atomically(func(tx *Tx) any {
 			tx.Assert(false)
 			return nil
 		})
@@ -262,7 +262,7 @@ func TestSleepingBeauty(t *testing.T) {
 //			i++
 //		}
 //	}()
-//	Atomically(func(tx *Tx) interface{} {
+//	Atomically(func(tx *Tx) any {
 //		debug.PrintStack()
 //		ret := func() {
 //			defer Atomically(nil)

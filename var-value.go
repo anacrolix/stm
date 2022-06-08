@@ -1,8 +1,8 @@
 package stm
 
 type VarValue interface {
-	Set(interface{}) VarValue
-	Get() interface{}
+	Set(any) VarValue
+	Get() any
 	Changed(VarValue) bool
 }
 
@@ -13,14 +13,14 @@ type versionedValue[T any] struct {
 	version version
 }
 
-func (me versionedValue[T]) Set(newValue interface{}) VarValue {
+func (me versionedValue[T]) Set(newValue any) VarValue {
 	return versionedValue[T]{
 		value:   newValue.(T),
 		version: me.version + 1,
 	}
 }
 
-func (me versionedValue[T]) Get() interface{} {
+func (me versionedValue[T]) Get() any {
 	return me.value
 }
 
@@ -39,13 +39,13 @@ func (me customVarValue[T]) Changed(other VarValue) bool {
 	return me.changed(me.value, other.(customVarValue[T]).value)
 }
 
-func (me customVarValue[T]) Set(newValue interface{}) VarValue {
+func (me customVarValue[T]) Set(newValue any) VarValue {
 	return customVarValue[T]{
 		value:   newValue.(T),
 		changed: me.changed,
 	}
 }
 
-func (me customVarValue[T]) Get() interface{} {
+func (me customVarValue[T]) Get() any {
 	return me.value
 }

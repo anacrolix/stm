@@ -25,7 +25,7 @@ func (v *Var[T]) getLock() *sync.Mutex {
 	return &v.mu
 }
 
-func (v *Var[T]) changeValue(new interface{}) {
+func (v *Var[T]) changeValue(new any) {
 	old := v.value.Load()
 	newVarValue := old.Set(new)
 	v.value.Store(newVarValue)
@@ -35,7 +35,7 @@ func (v *Var[T]) changeValue(new interface{}) {
 }
 
 func (v *Var[T]) wakeWatchers(new VarValue) {
-	v.watchers.Range(func(k, _ interface{}) bool {
+	v.watchers.Range(func(k, _ any) bool {
 		tx := k.(*Tx)
 		// We have to lock here to ensure that the Tx is waiting before we signal it. Otherwise we
 		// could signal it before it goes to sleep and it will miss the notification.

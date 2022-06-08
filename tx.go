@@ -11,7 +11,7 @@ import (
 
 type txVar interface {
 	getValue() *atomic.Value[VarValue]
-	changeValue(interface{})
+	changeValue(any)
 	getWatchers() *sync.Map
 	getLock() *sync.Mutex
 }
@@ -19,7 +19,7 @@ type txVar interface {
 // A Tx represents an atomic transaction.
 type Tx struct {
 	reads          map[txVar]VarValue
-	writes         map[txVar]interface{}
+	writes         map[txVar]any
 	watching       map[txVar]struct{}
 	locks          txLocks
 	mu             sync.Mutex
