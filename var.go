@@ -54,7 +54,7 @@ func (v *Var[T]) wakeWatchers(new VarValue) {
 // Returns a new STM variable.
 func NewVar[T any](val T) *Var[T] {
 	v := &Var[T]{}
-	v.value.Store(versionedValue{
+	v.value.Store(versionedValue[T]{
 		value: val,
 	})
 	return v

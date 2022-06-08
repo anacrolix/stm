@@ -8,24 +8,24 @@ type VarValue interface {
 
 type version uint64
 
-type versionedValue struct {
-	value   interface{}
+type versionedValue[T any] struct {
+	value   T
 	version version
 }
 
-func (me versionedValue) Set(newValue interface{}) VarValue {
-	return versionedValue{
-		value:   newValue,
+func (me versionedValue[T]) Set(newValue interface{}) VarValue {
+	return versionedValue[T]{
+		value:   newValue.(T),
 		version: me.version + 1,
 	}
 }
 
-func (me versionedValue) Get() interface{} {
+func (me versionedValue[T]) Get() interface{} {
 	return me.value
 }
 
-func (me versionedValue) Changed(other VarValue) bool {
-	return me.version != other.(versionedValue).version
+func (me versionedValue[T]) Changed(other VarValue) bool {
+	return me.version != other.(versionedValue[T]).version
 }
 
 type customVarValue[T any] struct {
