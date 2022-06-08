@@ -118,7 +118,6 @@ func (tx *Tx) Retry() struct{} {
 	retries.Add(txProfileValue{tx, tx.numRetryValues}, 1)
 	tx.numRetryValues++
 	panic(retry)
-	panic("unreachable")
 }
 
 // Assert is a helper function that retries a transaction if the condition is
