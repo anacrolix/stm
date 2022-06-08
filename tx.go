@@ -24,7 +24,7 @@ type Tx struct {
 // Check that none of the logged values have changed since the transaction began.
 func (tx *Tx) inputsChanged() bool {
 	for v, read := range tx.reads {
-		if read.Changed(v.value.Load().(VarValue)) {
+		if read.Changed(v.value.Load()) {
 			return true
 		}
 	}
@@ -84,7 +84,7 @@ func (tx *Tx) Get(v *Var) interface{} {
 	// If we haven't previously read v, record its version
 	vv, ok := tx.reads[v]
 	if !ok {
-		vv = v.value.Load().(VarValue)
+		vv = v.value.Load()
 		tx.reads[v] = vv
 	}
 	return vv.Get()

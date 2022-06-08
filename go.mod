@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/bradfitz/iter v0.0.0-20190303215204-33e6a9893b0c // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect

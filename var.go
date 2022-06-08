@@ -2,18 +2,19 @@ package stm
 
 import (
 	"sync"
-	"sync/atomic"
+
+	"github.com/alecthomas/atomic"
 )
 
 // Holds an STM variable.
 type Var struct {
-	value    atomic.Value
+	value    atomic.Value[VarValue]
 	watchers sync.Map
 	mu       sync.Mutex
 }
 
 func (v *Var) changeValue(new interface{}) {
-	old := v.value.Load().(VarValue)
+	old := v.value.Load()
 	newVarValue := old.Set(new)
 	v.value.Store(newVarValue)
 	if old.Changed(newVarValue) {
@@ -34,7 +35,7 @@ func (v *Var) wakeWatchers(new VarValue) {
 			}
 		}
 		tx.mu.Unlock()
-		return !v.value.Load().(VarValue).Changed(new)
+		return !v.value.Load().Changed(new)
 	})
 }
 

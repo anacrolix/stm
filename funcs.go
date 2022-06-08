@@ -105,7 +105,7 @@ retry:
 
 // AtomicGet is a helper function that atomically reads a value.
 func AtomicGet(v *Var) interface{} {
-	return v.value.Load().(VarValue).Get()
+	return v.value.Load().Get()
 }
 
 // AtomicSet is a helper function that atomically writes a value.
