@@ -108,7 +108,7 @@ func AtomicGet[T any](v *Var[T]) T {
 }
 
 // AtomicSet is a helper function that atomically writes a value.
-func AtomicSet[T any](v *Var[T], val interface{}) {
+func AtomicSet[T any](v *Var[T], val T) {
 	v.mu.Lock()
 	v.changeValue(val)
 	v.mu.Unlock()
