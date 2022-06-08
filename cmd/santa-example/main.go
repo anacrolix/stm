@@ -137,7 +137,7 @@ type selection struct {
 	gate1, gate2 gate
 }
 
-func chooseGroup(g *group, task string, s *selection) stm.Operation {
+func chooseGroup(g *group, task string, s *selection) stm.Operation[struct{}] {
 	return stm.VoidOperation(func(tx *stm.Tx) {
 		s.gate1, s.gate2 = g.await(tx)
 		s.task = task
