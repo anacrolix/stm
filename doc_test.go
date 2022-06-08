@@ -6,7 +6,7 @@ import (
 
 func Example() {
 	// create a shared variable
-	n := stm.NewVar[int](3)
+	n := stm.NewVar(3)
 
 	// read a variable
 	var v int

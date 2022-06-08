@@ -64,7 +64,7 @@ func (g gate) operate() {
 func newGate(capacity int) gate {
 	return gate{
 		capacity:  capacity,
-		remaining: stm.NewVar[int](0), // gate starts out closed
+		remaining: stm.NewVar(0), // gate starts out closed
 	}
 }
 
@@ -77,9 +77,9 @@ type group struct {
 func newGroup(capacity int) *group {
 	return &group{
 		capacity:  capacity,
-		remaining: stm.NewVar[int](capacity), // group starts out with full capacity
-		gate1:     stm.NewVar[gate](newGate(capacity)),
-		gate2:     stm.NewVar[gate](newGate(capacity)),
+		remaining: stm.NewVar(capacity), // group starts out with full capacity
+		gate1:     stm.NewVar(newGate(capacity)),
+		gate2:     stm.NewVar(newGate(capacity)),
 	}
 }
 

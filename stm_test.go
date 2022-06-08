@@ -11,7 +11,7 @@ import (
 )
 
 func TestDecrement(t *testing.T) {
-	x := NewVar[int](1000)
+	x := NewVar(1000)
 	for i := 0; i < 500; i++ {
 		go Atomically(VoidOperation(func(tx *Tx) {
 			cur := x.Get(tx)
@@ -35,7 +35,7 @@ func TestDecrement(t *testing.T) {
 // read-only transaction aren't exempt from calling tx.inputsChanged
 func TestReadVerify(t *testing.T) {
 	read := make(chan struct{})
-	x, y := NewVar[int](1), NewVar[int](2)
+	x, y := NewVar(1), NewVar(2)
 
 	// spawn a transaction that writes to x
 	go func() {
@@ -61,7 +61,7 @@ func TestReadVerify(t *testing.T) {
 }
 
 func TestRetry(t *testing.T) {
-	x := NewVar[int](10)
+	x := NewVar(10)
 	// spawn 10 transactions, one every 10 milliseconds. This will decrement x
 	// to 0 over the course of 100 milliseconds.
 	go func() {
@@ -93,7 +93,7 @@ func TestVerify(t *testing.T) {
 	type foo struct {
 		i int
 	}
-	x := NewVar[*foo](&foo{3})
+	x := NewVar(&foo{3})
 	read := make(chan struct{})
 
 	// spawn a transaction that modifies x
@@ -128,14 +128,14 @@ func TestSelect(t *testing.T) {
 	require.Panics(t, func() { Atomically(Select[struct{}]()) })
 
 	// with one arg, Select adds no effect
-	x := NewVar[int](2)
+	x := NewVar(2)
 	Atomically(Select(VoidOperation(func(tx *Tx) {
 		tx.Assert(x.Get(tx) == 2)
 	})))
 
 	picked := Atomically(Select(
 		// always blocks; should never be selected
-		func(tx *Tx)int {
+		func(tx *Tx) int {
 			tx.Retry()
 			panic("unreachable")
 		},
@@ -179,7 +179,7 @@ func TestPanic(t *testing.T) {
 func TestReadWritten(t *testing.T) {
 	// reading a variable written in the same transaction should return the
 	// previously written value
-	x := NewVar[int](3)
+	x := NewVar(3)
 	Atomically(VoidOperation(func(tx *Tx) {
 		x.Set(tx, 5)
 		tx.Assert(x.Get(tx) == 5)
@@ -188,7 +188,7 @@ func TestReadWritten(t *testing.T) {
 
 func TestAtomicSetRetry(t *testing.T) {
 	// AtomicSet should cause waiting transactions to retry
-	x := NewVar[int](3)
+	x := NewVar(3)
 	done := make(chan struct{})
 	go func() {
 		Atomically(VoidOperation(func(tx *Tx) {
@@ -207,9 +207,9 @@ func TestAtomicSetRetry(t *testing.T) {
 
 func testPingPong(t testing.TB, n int, afterHit func(string)) {
 	ball := NewBuiltinEqVar(false)
-	doneVar := NewVar[bool](false)
-	hits := NewVar[int](0)
-	ready := NewVar[bool](true) // The ball is ready for hitting.
+	doneVar := NewVar(false)
+	hits := NewVar(0)
+	ready := NewVar(true) // The ball is ready for hitting.
 	var wg sync.WaitGroup
 	bat := func(from, to bool, noise string) {
 		defer wg.Done()

@@ -8,14 +8,14 @@ import (
 )
 
 func BenchmarkAtomicGet(b *testing.B) {
-	x := NewVar[int](0)
+	x := NewVar(0)
 	for i := 0; i < b.N; i++ {
 		AtomicGet(x)
 	}
 }
 
 func BenchmarkAtomicSet(b *testing.B) {
-	x := NewVar[int](0)
+	x := NewVar(0)
 	for i := 0; i < b.N; i++ {
 		AtomicSet(x, 0)
 	}
@@ -24,7 +24,7 @@ func BenchmarkAtomicSet(b *testing.B) {
 func BenchmarkIncrementSTM(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// spawn 1000 goroutines that each increment x by 1
-		x := NewVar[int](0)
+		x := NewVar(0)
 		for i := 0; i < 1000; i++ {
 			go Atomically(VoidOperation(func(tx *Tx) {
 				cur := x.Get(tx)
@@ -83,7 +83,7 @@ func BenchmarkReadVarSTM(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var wg sync.WaitGroup
 		wg.Add(1000)
-		x := NewVar[int](0)
+		x := NewVar(0)
 		for i := 0; i < 1000; i++ {
 			go func() {
 				AtomicGet(x)

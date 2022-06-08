@@ -26,7 +26,7 @@ func ContextDoneVar(ctx context.Context) (*stm.Var[bool], func()) {
 		v := stm.NewBuiltinEqVar(true)
 		return v, func() {}
 	}
-	v := stm.NewVar[bool](false)
+	v := stm.NewVar(false)
 	go func() {
 		<-ctx.Done()
 		stm.AtomicSet(v, true)

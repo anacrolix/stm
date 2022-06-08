@@ -99,9 +99,9 @@ func BenchmarkInvertedThunderingHerd(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		done := stm.NewBuiltinEqVar(false)
 		tokens := stm.NewBuiltinEqVar(0)
-		pending := stm.NewVar[stmutil.Settish](stmutil.NewSet())
+		pending := stm.NewVar(stmutil.NewSet())
 		for range iter.N(1000) {
-			ready := stm.NewVar[bool](false)
+			ready := stm.NewVar(false)
 			stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
 				pending.Set(tx, pending.Get(tx).Add(ready))
 			}))
