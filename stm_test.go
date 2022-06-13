@@ -14,14 +14,14 @@ func TestDecrement(t *testing.T) {
 	x := NewVar(1000)
 	for i := 0; i < 500; i++ {
 		go Atomically(VoidOperation(func(tx *Tx) {
-			cur := tx.Get(x).(int)
-			tx.Set(x, cur-1)
+			cur := x.Get(tx)
+			x.Set(tx, cur-1)
 		}))
 	}
 	done := make(chan struct{})
 	go func() {
 		Atomically(VoidOperation(func(tx *Tx) {
-			tx.Assert(tx.Get(x) == 500)
+			tx.Assert(x.Get(tx) == 500)
 		}))
 		close(done)
 	}()
@@ -50,10 +50,10 @@ func TestReadVerify(t *testing.T) {
 	// between the reads, causing this tx to retry.
 	var x2, y2 int
 	Atomically(VoidOperation(func(tx *Tx) {
-		x2 = tx.Get(x).(int)
+		x2 = x.Get(tx)
 		read <- struct{}{}
 		<-read // wait for other tx to complete
-		y2 = tx.Get(y).(int)
+		y2 = y.Get(tx)
 	}))
 	if x2 == 1 && y2 == 2 {
 		t.Fatal("read was not verified")
@@ -68,8 +68,8 @@ func TestRetry(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			time.Sleep(10 * time.Millisecond)
 			Atomically(VoidOperation(func(tx *Tx) {
-				cur := tx.Get(x).(int)
-				tx.Set(x, cur-1)
+				cur := x.Get(tx)
+				x.Set(tx, cur-1)
 			}))
 		}
 	}()
@@ -77,7 +77,7 @@ func TestRetry(t *testing.T) {
 	// retry. This should result in no more than 1 retry per transaction.
 	retry := 0
 	Atomically(VoidOperation(func(tx *Tx) {
-		cur := tx.Get(x).(int)
+		cur := x.Get(tx)
 		if cur != 0 {
 			retry++
 			tx.Retry()
@@ -100,9 +100,9 @@ func TestVerify(t *testing.T) {
 	go func() {
 		Atomically(VoidOperation(func(tx *Tx) {
 			<-read
-			rx := tx.Get(x).(*foo)
+			rx := x.Get(tx)
 			rx.i = 7
-			tx.Set(x, rx)
+			x.Set(tx, rx)
 		}))
 		read <- struct{}{}
 		// other tx should retry, so we need to read/send again
@@ -113,7 +113,7 @@ func TestVerify(t *testing.T) {
 	// between the reads, causing this tx to retry.
 	var i int
 	Atomically(VoidOperation(func(tx *Tx) {
-		f := tx.Get(x).(*foo)
+		f := x.Get(tx)
 		i = f.i
 		read <- struct{}{}
 		<-read // wait for other tx to complete
@@ -125,36 +125,37 @@ func TestVerify(t *testing.T) {
 
 func TestSelect(t *testing.T) {
 	// empty Select should panic
-	require.Panics(t, func() { Atomically(Select()) })
+	require.Panics(t, func() { Atomically(Select[struct{}]()) })
 
 	// with one arg, Select adds no effect
 	x := NewVar(2)
 	Atomically(Select(VoidOperation(func(tx *Tx) {
-		tx.Assert(tx.Get(x).(int) == 2)
+		tx.Assert(x.Get(tx) == 2)
 	})))
 
 	picked := Atomically(Select(
 		// always blocks; should never be selected
-		VoidOperation(func(tx *Tx) {
+		func(tx *Tx) int {
 			tx.Retry()
-		}),
+			panic("unreachable")
+		},
 		// always succeeds; should always be selected
-		func(tx *Tx) interface{} {
+		func(tx *Tx) int {
 			return 2
 		},
 		// always succeeds; should never be selected
-		func(tx *Tx) interface{} {
+		func(tx *Tx) int {
 			return 3
 		},
-	)).(int)
+	))
 	assert.EqualValues(t, 2, picked)
 }
 
 func TestCompose(t *testing.T) {
 	nums := make([]int, 100)
-	fns := make([]Operation, 100)
+	fns := make([]Operation[struct{}], 100)
 	for i := range fns {
-		fns[i] = func(x int) Operation {
+		fns[i] = func(x int) Operation[struct{}] {
 			return VoidOperation(func(*Tx) { nums[x] = x })
 		}(i) // capture loop var
 	}
@@ -169,7 +170,7 @@ func TestCompose(t *testing.T) {
 func TestPanic(t *testing.T) {
 	// normal panics should escape Atomically
 	assert.PanicsWithValue(t, "foo", func() {
-		Atomically(func(*Tx) interface{} {
+		Atomically(func(*Tx) any {
 			panic("foo")
 		})
 	})
@@ -180,8 +181,8 @@ func TestReadWritten(t *testing.T) {
 	// previously written value
 	x := NewVar(3)
 	Atomically(VoidOperation(func(tx *Tx) {
-		tx.Set(x, 5)
-		tx.Assert(tx.Get(x).(int) == 5)
+		x.Set(tx, 5)
+		tx.Assert(x.Get(tx) == 5)
 	}))
 }
 
@@ -191,7 +192,7 @@ func TestAtomicSetRetry(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		Atomically(VoidOperation(func(tx *Tx) {
-			tx.Assert(tx.Get(x).(int) == 5)
+			tx.Assert(x.Get(tx) == 5)
 		}))
 		done <- struct{}{}
 	}()
@@ -210,17 +211,17 @@ func testPingPong(t testing.TB, n int, afterHit func(string)) {
 	hits := NewVar(0)
 	ready := NewVar(true) // The ball is ready for hitting.
 	var wg sync.WaitGroup
-	bat := func(from, to interface{}, noise string) {
+	bat := func(from, to bool, noise string) {
 		defer wg.Done()
-		for !Atomically(func(tx *Tx) interface{} {
-			if tx.Get(doneVar).(bool) {
+		for !Atomically(func(tx *Tx) any {
+			if doneVar.Get(tx) {
 				return true
 			}
-			tx.Assert(tx.Get(ready).(bool))
-			if tx.Get(ball) == from {
-				tx.Set(ball, to)
-				tx.Set(hits, tx.Get(hits).(int)+1)
-				tx.Set(ready, false)
+			tx.Assert(ready.Get(tx))
+			if ball.Get(tx) == from {
+				ball.Set(tx, to)
+				hits.Set(tx, hits.Get(tx)+1)
+				ready.Set(tx, false)
 				return false
 			}
 			return tx.Retry()
@@ -233,8 +234,8 @@ func testPingPong(t testing.TB, n int, afterHit func(string)) {
 	go bat(false, true, "ping!")
 	go bat(true, false, "pong!")
 	Atomically(VoidOperation(func(tx *Tx) {
-		tx.Assert(tx.Get(hits).(int) >= n)
-		tx.Set(doneVar, true)
+		tx.Assert(hits.Get(tx) >= n)
+		doneVar.Set(tx, true)
 	}))
 	wg.Wait()
 }
@@ -245,7 +246,7 @@ func TestPingPong(t *testing.T) {
 
 func TestSleepingBeauty(t *testing.T) {
 	require.Panics(t, func() {
-		Atomically(func(tx *Tx) interface{} {
+		Atomically(func(tx *Tx) any {
 			tx.Assert(false)
 			return nil
 		})
@@ -253,7 +254,7 @@ func TestSleepingBeauty(t *testing.T) {
 }
 
 //func TestRetryStack(t *testing.T) {
-//	v := NewVar(nil)
+//	v := NewVar[int](nil)
 //	go func() {
 //		i := 0
 //		for {
@@ -261,12 +262,12 @@ func TestSleepingBeauty(t *testing.T) {
 //			i++
 //		}
 //	}()
-//	Atomically(func(tx *Tx) interface{} {
+//	Atomically(func(tx *Tx) any {
 //		debug.PrintStack()
 //		ret := func() {
 //			defer Atomically(nil)
 //		}
-//		tx.Get(v)
+//		v.Get(tx)
 //		tx.Assert(false)
 //		return ret
 //	})

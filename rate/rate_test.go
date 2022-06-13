@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build go1.7
 // +build go1.7
 
 package rate
@@ -403,7 +404,7 @@ func runWait(t *testing.T, lim *Limiter, w wait) {
 	t.Helper()
 	start := time.Now()
 	err := lim.WaitN(w.ctx, w.n)
-	delay := time.Now().Sub(start)
+	delay := time.Since(start)
 	if (w.nilErr && err != nil) || (!w.nilErr && err == nil) || w.delay != dFromDuration(delay) {
 		errString := "<nil>"
 		if !w.nilErr {

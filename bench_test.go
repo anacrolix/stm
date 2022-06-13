@@ -27,13 +27,13 @@ func BenchmarkIncrementSTM(b *testing.B) {
 		x := NewVar(0)
 		for i := 0; i < 1000; i++ {
 			go Atomically(VoidOperation(func(tx *Tx) {
-				cur := tx.Get(x).(int)
-				tx.Set(x, cur+1)
+				cur := x.Get(tx)
+				x.Set(tx, cur+1)
 			}))
 		}
 		// wait for x to reach 1000
 		Atomically(VoidOperation(func(tx *Tx) {
-			tx.Assert(tx.Get(x).(int) == 1000)
+			tx.Assert(x.Get(tx) == 1000)
 		}))
 	}
 }
