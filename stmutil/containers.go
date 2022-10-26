@@ -101,6 +101,10 @@ func (sm Map) Range(f func(key, value any) bool) {
 	}
 }
 
+func (m Map) Len() int {
+	return m.Map.Len()
+}
+
 func (sm Map) Iter(cb iter.Callback) {
 	sm.Range(func(key, _ any) bool {
 		return cb(key)
@@ -132,6 +136,10 @@ func (sm SortedMap) Range(f func(key, value any) bool) {
 			return
 		}
 	}
+}
+
+func (sm SortedMap) Len() int {
+	return sm.SortedMap.Len()
 }
 
 func (sm SortedMap) Iter(cb iter.Callback) {
