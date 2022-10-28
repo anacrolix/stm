@@ -88,10 +88,6 @@ func (m Map) Set(key, value any) Mappish {
 	return m
 }
 
-func (m Map) Get(key any) (any, bool) {
-	return m.Map.Get(key)
-}
-
 func (sm Map) Range(f func(key, value any) bool) {
 	iter := sm.Map.Iterator()
 	for !iter.Done() {
@@ -114,10 +110,6 @@ type SortedMap struct {
 func (sm SortedMap) Set(key, value any) Mappish {
 	sm.SortedMap = sm.SortedMap.Set(key, value)
 	return sm
-}
-
-func (sm SortedMap) Get(key any) (any, bool) {
-	return sm.SortedMap.Get(key)
 }
 
 func (sm SortedMap) Delete(key any) Mappish {
