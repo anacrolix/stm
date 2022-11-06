@@ -17,3 +17,5 @@ require (
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 )
+
+exclude github.com/benbjohnson/immutable v0.4.0
