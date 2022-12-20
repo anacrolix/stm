@@ -3,13 +3,16 @@ package stmutil
 import (
 	"unsafe"
 
-	"github.com/benbjohnson/immutable"
-	"golang.org/x/exp/constraints"
-
 	"github.com/anacrolix/missinggo/v2/iter"
+	"github.com/benbjohnson/immutable"
 )
 
-type Settish[K constraints.Ordered] interface {
+// This is the type constraint for keys passed through from github.com/benbjohnson/immutable.
+type KeyConstraint interface {
+	comparable
+}
+
+type Settish[K KeyConstraint] interface {
 	Add(K) Settish[K]
 	Delete(K) Settish[K]
 	Contains(K) bool
@@ -18,11 +21,11 @@ type Settish[K constraints.Ordered] interface {
 	Len() int
 }
 
-type mapToSet[K constraints.Ordered, V any] struct {
+type mapToSet[K KeyConstraint, V any] struct {
 	m Mappish[K, V]
 }
 
-type interhash[K constraints.Ordered] struct{}
+type interhash[K KeyConstraint] struct{}
 
 func (interhash[K]) Hash(x K) uint32 {
 	return uint32(nilinterhash(unsafe.Pointer(&x), 0))
@@ -32,11 +35,11 @@ func (interhash[K]) Equal(i, j K) bool {
 	return i == j
 }
 
-func NewSet[K constraints.Ordered]() Settish[K] {
+func NewSet[K KeyConstraint]() Settish[K] {
 	return mapToSet[K, struct{}]{NewMap[K, struct{}]()}
 }
 
-func NewSortedSet[K constraints.Ordered, V any](lesser lessFunc[K]) Settish[K] {
+func NewSortedSet[K KeyConstraint, V any](lesser lessFunc[K]) Settish[K] {
 	return mapToSet[K, V]{NewSortedMap[K, V](lesser)}
 }
 
@@ -72,11 +75,11 @@ func (s mapToSet[K, V]) Iter(cb iter.Callback) {
 	})
 }
 
-type Map[K constraints.Ordered, V any] struct {
+type Map[K KeyConstraint, V any] struct {
 	*immutable.Map[K, V]
 }
 
-func NewMap[K constraints.Ordered, V any]() Mappish[K, V] {
+func NewMap[K KeyConstraint, V any]() Mappish[K, V] {
 	return Map[K, V]{immutable.NewMap[K, V](interhash[K]{})}
 }
 
@@ -109,7 +112,7 @@ func (sm Map[K, V]) Iter(cb iter.Callback) {
 	})
 }
 
-type SortedMap[K constraints.Ordered, V any] struct {
+type SortedMap[K KeyConstraint, V any] struct {
 	*immutable.SortedMap[K, V]
 }
 
@@ -142,9 +145,9 @@ func (sm SortedMap[K, V]) Iter(cb iter.Callback) {
 	})
 }
 
-type lessFunc[T constraints.Ordered] func(l, r T) bool
+type lessFunc[T KeyConstraint] func(l, r T) bool
 
-type comparer[K constraints.Ordered] struct {
+type comparer[K KeyConstraint] struct {
 	less lessFunc[K]
 }
 
@@ -158,7 +161,7 @@ func (me comparer[K]) Compare(i, j K) int {
 	}
 }
 
-func NewSortedMap[K constraints.Ordered, V any](less lessFunc[K]) Mappish[K, V] {
+func NewSortedMap[K KeyConstraint, V any](less lessFunc[K]) Mappish[K, V] {
 	return SortedMap[K, V]{
 		SortedMap: immutable.NewSortedMap[K, V](comparer[K]{less}),
 	}
