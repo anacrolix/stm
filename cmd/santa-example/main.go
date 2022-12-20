@@ -3,28 +3,28 @@
 //
 // The problem is given as:
 //
-//   Santa repeatedly sleeps until wakened by either all of his nine reindeer,
-//   back from their holidays, or by a group of three of his ten elves. If
-//   awakened by the reindeer, he harnesses each of them to his sleigh,
-//   delivers toys with them and finally unharnesses them (allowing them to
-//   go off on holiday). If awakened by a group of elves, he shows each of the
-//   group into his study, consults with them on toy R&D and finally shows
-//   them each out (allowing them to go back to work). Santa should give
-//   priority to the reindeer in the case that there is both a group of elves
-//   and a group of reindeer waiting.
+//	Santa repeatedly sleeps until wakened by either all of his nine reindeer,
+//	back from their holidays, or by a group of three of his ten elves. If
+//	awakened by the reindeer, he harnesses each of them to his sleigh,
+//	delivers toys with them and finally unharnesses them (allowing them to
+//	go off on holiday). If awakened by a group of elves, he shows each of the
+//	group into his study, consults with them on toy R&D and finally shows
+//	them each out (allowing them to go back to work). Santa should give
+//	priority to the reindeer in the case that there is both a group of elves
+//	and a group of reindeer waiting.
 //
 // Here we follow the solution given in the paper, described as such:
 //
-//   Santa makes one "Group" for the elves and one for the reindeer. Each elf
-//   (or reindeer) tries to join its Group. If it succeeds, it gets two
-//   "Gates" in return. The first Gate allows Santa to control when the elf
-//   can enter the study, and also lets Santa know when they are all inside.
-//   Similarly, the second Gate controls the elves leaving the study. Santa,
-//   for his part, waits for either of his two Groups to be ready, and then
-//   uses that Group's Gates to marshal his helpers (elves or reindeer)
-//   through their task. Thus the helpers spend their lives in an infinite
-//   loop: try to join a group, move through the gates under Santa's control,
-//   and then delay for a random interval before trying to join a group again.
+//	Santa makes one "Group" for the elves and one for the reindeer. Each elf
+//	(or reindeer) tries to join its Group. If it succeeds, it gets two
+//	"Gates" in return. The first Gate allows Santa to control when the elf
+//	can enter the study, and also lets Santa know when they are all inside.
+//	Similarly, the second Gate controls the elves leaving the study. Santa,
+//	for his part, waits for either of his two Groups to be ready, and then
+//	uses that Group's Gates to marshal his helpers (elves or reindeer)
+//	through their task. Thus the helpers spend their lives in an infinite
+//	loop: try to join a group, move through the gates under Santa's control,
+//	and then delay for a random interval before trying to join a group again.
 //
 // See the paper for more details regarding the solution's implementation.
 package main
