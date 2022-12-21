@@ -21,8 +21,8 @@ type Settish[K KeyConstraint] interface {
 	Len() int
 }
 
-type mapToSet[K KeyConstraint, V any] struct {
-	m Mappish[K, V]
+type mapToSet[K KeyConstraint] struct {
+	m Mappish[K, struct{}]
 }
 
 type interhash[K KeyConstraint] struct{}
@@ -36,40 +36,39 @@ func (interhash[K]) Equal(i, j K) bool {
 }
 
 func NewSet[K KeyConstraint]() Settish[K] {
-	return mapToSet[K, struct{}]{NewMap[K, struct{}]()}
+	return mapToSet[K]{NewMap[K, struct{}]()}
 }
 
-func NewSortedSet[K KeyConstraint, V any](lesser lessFunc[K]) Settish[K] {
-	return mapToSet[K, V]{NewSortedMap[K, V](lesser)}
+func NewSortedSet[K KeyConstraint](lesser lessFunc[K]) Settish[K] {
+	return mapToSet[K]{NewSortedMap[K, struct{}](lesser)}
 }
 
-func (s mapToSet[K, V]) Add(x K) Settish[K] {
-	var v V
-	s.m = s.m.Set(x, v)
+func (s mapToSet[K]) Add(x K) Settish[K] {
+	s.m = s.m.Set(x, struct{}{})
 	return s
 }
 
-func (s mapToSet[K, V]) Delete(x K) Settish[K] {
+func (s mapToSet[K]) Delete(x K) Settish[K] {
 	s.m = s.m.Delete(x)
 	return s
 }
 
-func (s mapToSet[K, V]) Len() int {
+func (s mapToSet[K]) Len() int {
 	return s.m.Len()
 }
 
-func (s mapToSet[K, V]) Contains(x K) bool {
+func (s mapToSet[K]) Contains(x K) bool {
 	_, ok := s.m.Get(x)
 	return ok
 }
 
-func (s mapToSet[K, V]) Range(f func(K) bool) {
-	s.m.Range(func(k K, _ V) bool {
+func (s mapToSet[K]) Range(f func(K) bool) {
+	s.m.Range(func(k K, _ struct{}) bool {
 		return f(k)
 	})
 }
 
-func (s mapToSet[K, V]) Iter(cb iter.Callback) {
+func (s mapToSet[K]) Iter(cb iter.Callback) {
 	s.Range(func(k K) bool {
 		return cb(k)
 	})
