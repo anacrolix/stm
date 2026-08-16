@@ -23,6 +23,31 @@ func runIsolated(t *testing.T, f func(t *testing.T)) {
 	}
 }
 
+// tokenGenerator counts the tokens that have become available before it blocks
+// on the bucket having room for one, so when a token is finally taken it
+// commits a count worked out from a timestamp that has gone stale, and winds
+// lastAdd back into the past. The round after that finds a pile of tokens
+// available immediately, and hands them out regardless of the burst.
+func TestBurstIsNotExceededAfterIdling(t *testing.T) {
+	const interval = time.Second
+	// Idle for a non-multiple of the interval, so that a token becoming
+	// available on schedule can't land inside the window measured below.
+	const idle = 2500 * time.Millisecond
+	const window = 20 * time.Millisecond
+	rl := NewLimiter(Every(interval), 1)
+	time.Sleep(idle)
+	granted := 0
+	for deadline := time.Now().Add(window); time.Now().Before(deadline); {
+		if rl.Allow() {
+			granted++
+		}
+	}
+	if granted > 1 {
+		t.Errorf("granted %v tokens in %v after idling %v, want at most the burst of 1",
+			granted, window, idle)
+	}
+}
+
 // A Limit above one token per nanosecond has an interval that rounds down to
 // zero, which the token generator then divides by.
 func TestRateFasterThanOnePerNanosecond(t *testing.T) {
