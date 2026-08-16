@@ -129,13 +129,12 @@ func BenchmarkInvertedThunderingHerd(b *testing.B) {
 			for stm.Atomically(func(tx *stm.Tx) bool {
 				tx.Assert(tokens.Get(tx) > 0)
 				tokens.Set(tx, tokens.Get(tx)-1)
-				pending.Get(tx).Range(func(ready *stm.Var[bool]) bool {
+				for ready := range pending.Get(tx).All() {
 					if !ready.Get(tx) {
 						ready.Set(tx, true)
-						return false
+						break
 					}
-					return true
-				})
+				}
 				return !done.Get(tx)
 			}) {
 			}

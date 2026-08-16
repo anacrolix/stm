@@ -2,8 +2,8 @@ package stmutil
 
 import (
 	"hash/maphash"
+	"iter"
 
-	"github.com/anacrolix/missinggo/v2/iter"
 	"github.com/benbjohnson/immutable"
 )
 
@@ -19,8 +19,7 @@ type Settish[K KeyConstraint] interface {
 	Add(K) Settish[K]
 	Delete(K) Settish[K]
 	Contains(K) bool
-	Range(func(K) bool)
-	iter.Iterable
+	All() iter.Seq[K]
 	Len() int
 }
 
@@ -65,16 +64,14 @@ func (s mapToSet[K]) Contains(x K) bool {
 	return ok
 }
 
-func (s mapToSet[K]) Range(f func(K) bool) {
-	s.m.Range(func(k K, _ struct{}) bool {
-		return f(k)
-	})
-}
-
-func (s mapToSet[K]) Iter(cb iter.Callback) {
-	s.Range(func(k K) bool {
-		return cb(k)
-	})
+func (s mapToSet[K]) All() iter.Seq[K] {
+	return func(yield func(K) bool) {
+		for k := range s.m.All() {
+			if !yield(k) {
+				return
+			}
+		}
+	}
 }
 
 type Map[K KeyConstraint, V any] struct {
@@ -95,23 +92,16 @@ func (m Map[K, V]) Set(key K, value V) Mappish[K, V] {
 	return m
 }
 
-func (sm Map[K, V]) Range(f func(K, V) bool) {
-	iter := sm.Map.Iterator()
-	for {
-		k, v, ok := iter.Next()
-		if !ok {
-			break
-		}
-		if !f(k, v) {
-			return
+func (sm Map[K, V]) All() iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		it := sm.Map.Iterator()
+		for {
+			k, v, ok := it.Next()
+			if !ok || !yield(k, v) {
+				return
+			}
 		}
 	}
-}
-
-func (sm Map[K, V]) Iter(cb iter.Callback) {
-	sm.Range(func(key K, _ V) bool {
-		return cb(key)
-	})
 }
 
 type SortedMap[K KeyConstraint, V any] struct {
@@ -128,23 +118,16 @@ func (sm SortedMap[K, V]) Delete(key K) Mappish[K, V] {
 	return sm
 }
 
-func (sm SortedMap[K, V]) Range(f func(key K, value V) bool) {
-	iter := sm.SortedMap.Iterator()
-	for {
-		k, v, ok := iter.Next()
-		if !ok {
-			break
-		}
-		if !f(k, v) {
-			return
+func (sm SortedMap[K, V]) All() iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		it := sm.SortedMap.Iterator()
+		for {
+			k, v, ok := it.Next()
+			if !ok || !yield(k, v) {
+				return
+			}
 		}
 	}
-}
-
-func (sm SortedMap[K, V]) Iter(cb iter.Callback) {
-	sm.Range(func(key K, _ V) bool {
-		return cb(key)
-	})
 }
 
 type lessFunc[T KeyConstraint] func(l, r T) bool
@@ -173,9 +156,8 @@ type Mappish[K, V any] interface {
 	Set(K, V) Mappish[K, V]
 	Delete(key K) Mappish[K, V]
 	Get(key K) (V, bool)
-	Range(func(K, V) bool)
+	All() iter.Seq2[K, V]
 	Len() int
-	iter.Iterable
 }
 
 func GetLeft(l, _ any) any {
