@@ -2,39 +2,25 @@ package stmutil
 
 import (
 	"context"
-	"sync"
 
 	"github.com/anacrolix/stm"
-)
-
-var (
-	mu      sync.Mutex
-	ctxVars = map[context.Context]*stm.Var[bool]{}
 )
 
 // Returns an STM var that contains a bool equal to `ctx.Err != nil`, and a cancel function to be
 // called when the user is no longer interested in the var.
 func ContextDoneVar(ctx context.Context) (*stm.Var[bool], func()) {
-	mu.Lock()
-	defer mu.Unlock()
-	if v, ok := ctxVars[ctx]; ok {
-		return v, func() {}
-	}
 	if ctx.Err() != nil {
 		// TODO: What if we had read-only Vars? Then we could have a global one for this that we
 		// just reuse.
-		v := stm.NewBuiltinEqVar(true)
-		return v, func() {}
+		return stm.NewBuiltinEqVar(true), func() {}
 	}
 	v := stm.NewVar(false)
-	// AfterFunc doesn't park a goroutine per context the way a bare <-ctx.Done() receive does: it
-	// registers with the Context and only spawns a goroutine once the Context is actually done.
-	context.AfterFunc(ctx, func() {
+	// AfterFunc registers with the Context instead of parking a goroutine on <-ctx.Done(), and
+	// returns the means to unregister again, which is all there is for cancel to do. Callers get a
+	// Var each: sharing one per Context needs a cache, and a cache needs to know when the last
+	// caller has gone, which costs more than the Var it saves. See the benchmarks.
+	stop := context.AfterFunc(ctx, func() {
 		stm.AtomicSet(v, true)
-		mu.Lock()
-		delete(ctxVars, ctx)
-		mu.Unlock()
 	})
-	ctxVars[ctx] = v
-	return v, func() {}
+	return v, func() { stop() }
 }
