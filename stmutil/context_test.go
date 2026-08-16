@@ -4,17 +4,17 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	qt "github.com/go-quicktest/qt"
 )
 
 func TestContextEquality(t *testing.T) {
 	ctx := context.Background()
-	assert.True(t, ctx == context.Background())
+	qt.Check(t, qt.IsTrue(ctx == context.Background()))
 	childCtx, cancel := context.WithCancel(ctx)
-	assert.True(t, childCtx != ctx)
-	assert.True(t, childCtx != ctx)
-	assert.Equal(t, context.Background(), ctx)
+	qt.Check(t, qt.IsTrue(childCtx != ctx))
+	qt.Check(t, qt.IsTrue(childCtx != ctx))
+	qt.Check(t, qt.Equals(ctx, context.Background()))
 	cancel()
-	assert.Equal(t, context.Background(), ctx)
-	assert.NotEqual(t, ctx, childCtx)
+	qt.Check(t, qt.Equals(ctx, context.Background()))
+	qt.Check(t, qt.Not(qt.Equals(childCtx, ctx)))
 }

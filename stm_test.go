@@ -6,8 +6,7 @@ import (
 	"time"
 
 	_ "github.com/anacrolix/envpprof"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	qt "github.com/go-quicktest/qt"
 )
 
 func TestDecrement(t *testing.T) {
@@ -125,7 +124,7 @@ func TestVerify(t *testing.T) {
 
 func TestSelect(t *testing.T) {
 	// empty Select should panic
-	require.Panics(t, func() { Atomically(Select[struct{}]()) })
+	qt.Assert(t, qt.PanicMatches(func() { Atomically(Select[struct{}]()) }, "not waiting on anything"))
 
 	// with one arg, Select adds no effect
 	x := NewVar(2)
@@ -148,7 +147,7 @@ func TestSelect(t *testing.T) {
 			return 3
 		},
 	))
-	assert.EqualValues(t, 2, picked)
+	qt.Check(t, qt.Equals(picked, 2))
 }
 
 func TestCompose(t *testing.T) {
@@ -169,11 +168,11 @@ func TestCompose(t *testing.T) {
 
 func TestPanic(t *testing.T) {
 	// normal panics should escape Atomically
-	assert.PanicsWithValue(t, "foo", func() {
+	qt.Check(t, qt.PanicMatches(func() {
 		Atomically(func(*Tx) any {
 			panic("foo")
 		})
-	})
+	}, "foo"))
 }
 
 func TestReadWritten(t *testing.T) {
@@ -245,12 +244,12 @@ func TestPingPong(t *testing.T) {
 }
 
 func TestSleepingBeauty(t *testing.T) {
-	require.Panics(t, func() {
+	qt.Assert(t, qt.PanicMatches(func() {
 		Atomically(func(tx *Tx) any {
 			tx.Assert(false)
 			return nil
 		})
-	})
+	}, "not waiting on anything"))
 }
 
 //func TestRetryStack(t *testing.T) {
