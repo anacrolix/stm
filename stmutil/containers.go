@@ -1,11 +1,14 @@
 package stmutil
 
 import (
-	"unsafe"
+	"hash/maphash"
 
 	"github.com/anacrolix/missinggo/v2/iter"
 	"github.com/benbjohnson/immutable"
 )
+
+// Seed for hashing keys. Generated once per process.
+var hashSeed = maphash.MakeSeed()
 
 // This is the type constraint for keys passed through from github.com/benbjohnson/immutable.
 type KeyConstraint interface {
@@ -28,7 +31,7 @@ type mapToSet[K KeyConstraint] struct {
 type interhash[K KeyConstraint] struct{}
 
 func (interhash[K]) Hash(x K) uint32 {
-	return uint32(nilinterhash(unsafe.Pointer(&x), 0))
+	return uint32(maphash.Comparable(hashSeed, x))
 }
 
 func (interhash[K]) Equal(i, j K) bool {
@@ -177,14 +180,6 @@ type Mappish[K, V any] interface {
 
 func GetLeft(l, _ any) any {
 	return l
-}
-
-//go:noescape
-//go:linkname nilinterhash runtime.nilinterhash
-func nilinterhash(p unsafe.Pointer, h uintptr) uintptr
-
-func interfaceHash(x any) uint32 {
-	return uint32(nilinterhash(unsafe.Pointer(&x), 0))
 }
 
 type Lenner interface {

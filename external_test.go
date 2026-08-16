@@ -4,7 +4,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/anacrolix/missinggo/iter"
 	"github.com/anacrolix/stm"
 	"github.com/anacrolix/stm/stmutil"
 )
@@ -12,16 +11,15 @@ import (
 const maxTokens = 25
 
 func BenchmarkThunderingHerdCondVar(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var mu sync.Mutex
 		consumer := sync.NewCond(&mu)
 		generator := sync.NewCond(&mu)
 		done := false
 		tokens := 0
 		var pending sync.WaitGroup
-		for range iter.N(1000) {
-			pending.Add(1)
-			go func() {
+		for range 1000 {
+			pending.Go(func() {
 				mu.Lock()
 				for {
 					if tokens > 0 {
@@ -32,8 +30,7 @@ func BenchmarkThunderingHerdCondVar(b *testing.B) {
 					consumer.Wait()
 				}
 				mu.Unlock()
-				pending.Done()
-			}()
+			})
 		}
 		go func() {
 			mu.Lock()
@@ -57,11 +54,11 @@ func BenchmarkThunderingHerdCondVar(b *testing.B) {
 }
 
 func BenchmarkThunderingHerd(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		done := stm.NewBuiltinEqVar(false)
 		tokens := stm.NewBuiltinEqVar(0)
 		pending := stm.NewBuiltinEqVar(0)
-		for range iter.N(1000) {
+		for range 1000 {
 			stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
 				pending.Set(tx, pending.Get(tx)+1)
 			}))
@@ -96,11 +93,11 @@ func BenchmarkThunderingHerd(b *testing.B) {
 }
 
 func BenchmarkInvertedThunderingHerd(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		done := stm.NewBuiltinEqVar(false)
 		tokens := stm.NewBuiltinEqVar(0)
 		pending := stm.NewVar(stmutil.NewSet[*stm.Var[bool]]())
-		for range iter.N(1000) {
+		for range 1000 {
 			ready := stm.NewVar(false)
 			stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
 				pending.Set(tx, pending.Get(tx).Add(ready))
@@ -144,7 +141,7 @@ func BenchmarkInvertedThunderingHerd(b *testing.B) {
 			}
 		}()
 		stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
-			tx.Assert(pending.Get(tx).(stmutil.Lenner).Len() == 0)
+			tx.Assert(pending.Get(tx).Len() == 0)
 		}))
 		stm.AtomicSet(done, true)
 	}

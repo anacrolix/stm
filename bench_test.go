@@ -3,29 +3,27 @@ package stm
 import (
 	"sync"
 	"testing"
-
-	"github.com/anacrolix/missinggo/iter"
 )
 
 func BenchmarkAtomicGet(b *testing.B) {
 	x := NewVar(0)
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		AtomicGet(x)
 	}
 }
 
 func BenchmarkAtomicSet(b *testing.B) {
 	x := NewVar(0)
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		AtomicSet(x, 0)
 	}
 }
 
 func BenchmarkIncrementSTM(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// spawn 1000 goroutines that each increment x by 1
 		x := NewVar(0)
-		for i := 0; i < 1000; i++ {
+		for range 1000 {
 			go Atomically(VoidOperation(func(tx *Tx) {
 				cur := x.Get(tx)
 				x.Set(tx, cur+1)
@@ -39,10 +37,10 @@ func BenchmarkIncrementSTM(b *testing.B) {
 }
 
 func BenchmarkIncrementMutex(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var mu sync.Mutex
 		x := 0
-		for i := 0; i < 1000; i++ {
+		for range 1000 {
 			go func() {
 				mu.Lock()
 				x++
@@ -61,10 +59,10 @@ func BenchmarkIncrementMutex(b *testing.B) {
 }
 
 func BenchmarkIncrementChannel(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		c := make(chan int, 1)
 		c <- 0
-		for i := 0; i < 1000; i++ {
+		for range 1000 {
 			go func() {
 				c <- 1 + <-c
 			}()
@@ -80,49 +78,43 @@ func BenchmarkIncrementChannel(b *testing.B) {
 }
 
 func BenchmarkReadVarSTM(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var wg sync.WaitGroup
-		wg.Add(1000)
 		x := NewVar(0)
-		for i := 0; i < 1000; i++ {
-			go func() {
+		for range 1000 {
+			wg.Go(func() {
 				AtomicGet(x)
-				wg.Done()
-			}()
+			})
 		}
 		wg.Wait()
 	}
 }
 
 func BenchmarkReadVarMutex(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var mu sync.Mutex
 		var wg sync.WaitGroup
-		wg.Add(1000)
 		x := 0
-		for i := 0; i < 1000; i++ {
-			go func() {
+		for range 1000 {
+			wg.Go(func() {
 				mu.Lock()
 				_ = x
 				mu.Unlock()
-				wg.Done()
-			}()
+			})
 		}
 		wg.Wait()
 	}
 }
 
 func BenchmarkReadVarChannel(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		var wg sync.WaitGroup
-		wg.Add(1000)
 		c := make(chan int)
 		close(c)
-		for i := 0; i < 1000; i++ {
-			go func() {
+		for range 1000 {
+			wg.Go(func() {
 				<-c
-				wg.Done()
-			}()
+			})
 		}
 		wg.Wait()
 	}
@@ -130,12 +122,10 @@ func BenchmarkReadVarChannel(b *testing.B) {
 
 func parallelPingPongs(b *testing.B, n int) {
 	var wg sync.WaitGroup
-	wg.Add(n)
-	for range iter.N(n) {
-		go func() {
-			defer wg.Done()
+	for range n {
+		wg.Go(func() {
 			testPingPong(b, b.N, func(string) {})
-		}()
+		})
 	}
 	wg.Wait()
 }

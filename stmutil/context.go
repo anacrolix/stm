@@ -27,13 +27,14 @@ func ContextDoneVar(ctx context.Context) (*stm.Var[bool], func()) {
 		return v, func() {}
 	}
 	v := stm.NewVar(false)
-	go func() {
-		<-ctx.Done()
+	// AfterFunc doesn't park a goroutine per context the way a bare <-ctx.Done() receive does: it
+	// registers with the Context and only spawns a goroutine once the Context is actually done.
+	context.AfterFunc(ctx, func() {
 		stm.AtomicSet(v, true)
 		mu.Lock()
 		delete(ctxVars, ctx)
 		mu.Unlock()
-	}()
+	})
 	ctxVars[ctx] = v
 	return v, func() {}
 }

@@ -1,16 +1,15 @@
 package stm
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 	"unsafe"
-
-	"github.com/alecthomas/atomic"
 )
 
 type txVar interface {
-	getValue() *atomic.Value[VarValue]
+	getValue() *atomicValue[VarValue]
 	changeValue(any)
 	getWatchers() *sync.Map
 	getLock() *sync.Mutex
@@ -130,12 +129,8 @@ func (tx *Tx) Assert(p bool) {
 
 func (tx *Tx) reset() {
 	tx.mu.Lock()
-	for k := range tx.reads {
-		delete(tx.reads, k)
-	}
-	for k := range tx.writes {
-		delete(tx.writes, k)
-	}
+	clear(tx.reads)
+	clear(tx.writes)
 	tx.mu.Unlock()
 	tx.removeRetryProfiles()
 	tx.resetLocks()
@@ -186,7 +181,7 @@ func (tx *Tx) collectAllLocks() {
 }
 
 func (tx *Tx) sortLocks() {
-	sort.Sort(&tx.locks)
+	tx.locks.sort()
 }
 
 func (tx *Tx) lock() {
@@ -205,21 +200,15 @@ func (tx *Tx) String() string {
 	return fmt.Sprintf("%[1]T %[1]p", tx)
 }
 
-// Dedicated type avoids reflection in sort.Slice.
 type txLocks struct {
 	mus []*sync.Mutex
 }
 
-func (me txLocks) Len() int {
-	return len(me.mus)
-}
-
-func (me txLocks) Less(i, j int) bool {
-	return uintptr(unsafe.Pointer(me.mus[i])) < uintptr(unsafe.Pointer(me.mus[j]))
-}
-
-func (me txLocks) Swap(i, j int) {
-	me.mus[i], me.mus[j] = me.mus[j], me.mus[i]
+// Sorts the locks by address, to establish a consistent acquisition order across transactions.
+func (me *txLocks) sort() {
+	slices.SortFunc(me.mus, func(i, j *sync.Mutex) int {
+		return cmp.Compare(uintptr(unsafe.Pointer(i)), uintptr(unsafe.Pointer(j)))
+	})
 }
 
 func (me *txLocks) clear() {

@@ -2,18 +2,16 @@ package stm
 
 import (
 	"sync"
-
-	"github.com/alecthomas/atomic"
 )
 
 // Holds an STM variable.
 type Var[T any] struct {
-	value    atomic.Value[VarValue]
+	value    atomicValue[VarValue]
 	watchers sync.Map
 	mu       sync.Mutex
 }
 
-func (v *Var[T]) getValue() *atomic.Value[VarValue] {
+func (v *Var[T]) getValue() *atomicValue[VarValue] {
 	return &v.value
 }
 

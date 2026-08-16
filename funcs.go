@@ -1,7 +1,8 @@
 package stm
 
 import (
-	"math/rand"
+	"maps"
+	"math/rand/v2"
 	"runtime/pprof"
 	"sync"
 	"time"
@@ -59,13 +60,10 @@ retry:
 	tx.tries++
 	tx.reset()
 	if sleepBetweenRetries {
-		shift := int64(tx.tries - 1)
 		const maxShift = 30
-		if shift > maxShift {
-			shift = maxShift
-		}
+		shift := min(int64(tx.tries-1), maxShift)
 		ns := int64(1) << shift
-		d := time.Duration(rand.Int63n(ns))
+		d := time.Duration(rand.Int64N(ns))
 		if d > 100*time.Microsecond {
 			tx.updateWatchers()
 			time.Sleep(time.Duration(ns))
@@ -138,10 +136,7 @@ func Select[R any](fns ...Operation[R]) Operation[R] {
 			return fns[0](tx)
 		default:
 			oldWrites := tx.writes
-			tx.writes = make(map[txVar]any, len(oldWrites))
-			for k, v := range oldWrites {
-				tx.writes[k] = v
-			}
+			tx.writes = maps.Clone(oldWrites)
 			ret, retry := catchRetry(fns[0], tx)
 			if retry {
 				tx.writes = oldWrites

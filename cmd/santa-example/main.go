@@ -162,11 +162,11 @@ func spawnSanta(elves, reindeer *group) {
 
 func main() {
 	elfGroup := newGroup(3)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		go spawnElf(elfGroup, i)
 	}
 	reinGroup := newGroup(9)
-	for i := 0; i < 9; i++ {
+	for i := range 9 {
 		go spawnReindeer(reinGroup, i)
 	}
 	// blocks forever

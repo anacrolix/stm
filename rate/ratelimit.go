@@ -60,10 +60,7 @@ func (rl *Limiter) tokenGenerator(interval time.Duration) {
 			cur := rl.cur.Get(tx)
 			max := rl.max.Get(tx)
 			tx.Assert(cur < max)
-			newCur := cur + available
-			if newCur > max {
-				newCur = max
-			}
+			newCur := min(cur+available, max)
 			if newCur != cur {
 				rl.cur.Set(tx, newCur)
 			}

@@ -11,7 +11,7 @@ import (
 
 func TestDecrement(t *testing.T) {
 	x := NewVar(1000)
-	for i := 0; i < 500; i++ {
+	for range 500 {
 		go Atomically(VoidOperation(func(tx *Tx) {
 			cur := x.Get(tx)
 			x.Set(tx, cur-1)
@@ -64,7 +64,7 @@ func TestRetry(t *testing.T) {
 	// spawn 10 transactions, one every 10 milliseconds. This will decrement x
 	// to 0 over the course of 100 milliseconds.
 	go func() {
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			time.Sleep(10 * time.Millisecond)
 			Atomically(VoidOperation(func(tx *Tx) {
 				cur := x.Get(tx)
