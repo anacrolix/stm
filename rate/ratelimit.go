@@ -24,7 +24,10 @@ const Inf = Limit(math.MaxFloat64)
 type Limit float64
 
 func (l Limit) interval() time.Duration {
-	return time.Duration(Limit(1*time.Second) / l)
+	// A Duration can't be finer than a nanosecond, so rates above a token per nanosecond get one
+	// anyway. Without the floor they'd get an interval of zero, which the token generator and the
+	// deadline estimate in WaitN both divide by. The burst still bounds what a caller can take.
+	return max(time.Duration(Limit(1*time.Second)/l), time.Nanosecond)
 }
 
 // The Limit that permits one token every interval. An interval of zero or less is unlimited.
