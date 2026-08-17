@@ -87,7 +87,7 @@ func (tx *Tx) wait() {
 func (v *Var[T]) Get(tx *Tx) T {
 	// If we previously wrote to v, it will be in the write log.
 	if val, ok := tx.writes[v]; ok {
-		return val.(T)
+		return fromAny[T](val)
 	}
 	// If we haven't previously read v, record its version
 	vv, ok := tx.reads[v]
@@ -95,7 +95,7 @@ func (v *Var[T]) Get(tx *Tx) T {
 		vv = v.getValue().Load()
 		tx.reads[v] = vv
 	}
-	return vv.Get().(T)
+	return fromAny[T](vv.Get())
 }
 
 // Set sets the value of a Var for the lifetime of the transaction.

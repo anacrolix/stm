@@ -87,30 +87,38 @@ retry:
 		tx.wait()
 		goto retry
 	}
-	// verify the read log
-	tx.lockAllVars()
-	if tx.inputsChanged() {
-		tx.unlock()
-		expvars.Add("failed commits", 1)
-		if profileFailedCommits {
-			failedCommitsProfile.Add(new(int), 0)
+	committed := func() bool {
+		// verify the read log
+		tx.lockAllVars()
+		// Deferred, because everything below holds the lock on every Var the transaction touched,
+		// and includes calls out to the comparisons a custom Var was made with. A panic in there
+		// would otherwise leave those Vars locked against every future transaction.
+		defer tx.unlock()
+		if tx.inputsChanged() {
+			expvars.Add("failed commits", 1)
+			if profileFailedCommits {
+				failedCommitsProfile.Add(new(int), 0)
+			}
+			return false
 		}
+		// commit the write log and broadcast that variables have changed
+		tx.commit()
+		tx.mu.Lock()
+		tx.completed = true
+		tx.cond.Broadcast()
+		tx.mu.Unlock()
+		return true
+	}()
+	if !committed {
 		goto retry
 	}
-	// commit the write log and broadcast that variables have changed
-	tx.commit()
-	tx.mu.Lock()
-	tx.completed = true
-	tx.cond.Broadcast()
-	tx.mu.Unlock()
-	tx.unlock()
 	expvars.Add("commits", 1)
 	return ret
 }
 
 // AtomicGet is a helper function that atomically reads a value.
 func AtomicGet[T any](v *Var[T]) T {
-	return v.value.Load().Get().(T)
+	return fromAny[T](v.value.Load().Get())
 }
 
 // AtomicSet is a helper function that atomically writes a value.
