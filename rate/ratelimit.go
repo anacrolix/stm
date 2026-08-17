@@ -27,11 +27,14 @@ func (l Limit) interval() time.Duration {
 	return time.Duration(Limit(1*time.Second) / l)
 }
 
+// The Limit that permits one token every interval. An interval of zero or less is unlimited.
 func Every(interval time.Duration) Limit {
-	if interval == 0 {
+	if interval <= 0 {
 		return Inf
 	}
-	return Limit(time.Second / interval)
+	// Not time.Second/interval: that's Duration division, so anything slower than a token a second
+	// truncates to no rate at all.
+	return Limit(1 / interval.Seconds())
 }
 
 func NewLimiter(rate Limit, burst numTokens) *Limiter {
