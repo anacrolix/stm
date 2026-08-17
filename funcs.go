@@ -56,6 +56,11 @@ func Atomically[R any](op Operation[R]) R {
 	expvars.Add("atomically", 1)
 	// run the transaction
 	tx := newTx()
+	// A panic that isn't the retry sentinel leaves through here, and the transaction has to stop
+	// watching the Vars it read on the way out. A transaction left in a Var's watchers is never
+	// going to wait or complete, so every later write to that Var strands a wakeWatchers goroutine
+	// on it, and that goroutine blocks the rest of the watchers from being woken at all.
+	defer tx.recycle()
 retry:
 	tx.tries++
 	tx.reset()
@@ -69,9 +74,13 @@ retry:
 			time.Sleep(time.Duration(ns))
 		}
 	}
-	tx.mu.Lock()
-	ret, retry := catchRetry(op, tx)
-	tx.mu.Unlock()
+	ret, retry := func() (R, bool) {
+		// Deferred, so that a panic escaping the operation doesn't leave the transaction locked
+		// against the wakeWatchers that want to look at its read log.
+		tx.mu.Lock()
+		defer tx.mu.Unlock()
+		return catchRetry(op, tx)
+	}()
 	if retry {
 		expvars.Add("retries", 1)
 		// wait for one of the variables we read to change before retrying
@@ -96,7 +105,6 @@ retry:
 	tx.mu.Unlock()
 	tx.unlock()
 	expvars.Add("commits", 1)
-	tx.recycle()
 	return ret
 }
 
