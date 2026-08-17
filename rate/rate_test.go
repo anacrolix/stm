@@ -20,8 +20,11 @@ func TestLimit(t *testing.T) {
 	}
 }
 
+// Note that the version of this inherited from x/time/rate takes the absolute
+// value of the ratio rather than of its distance from 1, so it can only fail
+// when a exceeds b, and never notices a limit that comes out too small.
 func closeEnough(a, b Limit) bool {
-	return (math.Abs(float64(a)/float64(b)) - 1.0) < 1e-9
+	return math.Abs(float64(a)/float64(b)-1.0) < 1e-9
 }
 
 func TestEvery(t *testing.T) {
@@ -47,6 +50,32 @@ func TestEvery(t *testing.T) {
 		lim := Every(tc.interval)
 		if !closeEnough(lim, tc.lim) {
 			t.Errorf("Every(%v) = %v want %v", tc.interval, lim, tc.lim)
+		}
+	}
+}
+
+// A limiter slower than one token per second regenerates nothing, because
+// Every divides Durations and so rounds its Limit down to zero, which makes
+// the token generator's interval time.Duration(+Inf).
+func TestEverySlowerThanASecond(t *testing.T) {
+	const interval = 2 * time.Second
+	rl := NewLimiter(Every(interval), 1)
+	if !rl.Allow() {
+		t.Fatal("the burst token should be available immediately")
+	}
+	started := time.Now()
+	deadline := time.After(2 * interval)
+	for {
+		if rl.Allow() {
+			if took := time.Since(started); took < interval/2 {
+				t.Fatalf("token regenerated after %v, want about %v", took, interval)
+			}
+			return
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("no token regenerated after %v", time.Since(started))
+		case <-time.After(20 * time.Millisecond):
 		}
 	}
 }

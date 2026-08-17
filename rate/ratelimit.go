@@ -24,14 +24,20 @@ const Inf = Limit(math.MaxFloat64)
 type Limit float64
 
 func (l Limit) interval() time.Duration {
-	return time.Duration(Limit(1*time.Second) / l)
+	// A Duration can't be finer than a nanosecond, so rates above a token per nanosecond get one
+	// anyway. Without the floor they'd get an interval of zero, which the token generator and the
+	// deadline estimate in WaitN both divide by. The burst still bounds what a caller can take.
+	return max(time.Duration(Limit(1*time.Second)/l), time.Nanosecond)
 }
 
+// The Limit that permits one token every interval. An interval of zero or less is unlimited.
 func Every(interval time.Duration) Limit {
-	if interval == 0 {
+	if interval <= 0 {
 		return Inf
 	}
-	return Limit(time.Second / interval)
+	// Not time.Second/interval: that's Duration division, so anything slower than a token a second
+	// truncates to no rate at all.
+	return Limit(1 / interval.Seconds())
 }
 
 func NewLimiter(rate Limit, burst numTokens) *Limiter {
@@ -49,21 +55,20 @@ func NewLimiter(rate Limit, burst numTokens) *Limiter {
 
 func (rl *Limiter) tokenGenerator(interval time.Duration) {
 	for {
-		lastAdd := stm.AtomicGet(rl.lastAdd)
-		time.Sleep(time.Until(lastAdd.Add(interval)))
-		now := time.Now()
-		available := numTokens(now.Sub(lastAdd) / interval)
-		if available < 1 {
-			continue
-		}
+		time.Sleep(time.Until(stm.AtomicGet(rl.lastAdd).Add(interval)))
 		stm.Atomically(stm.VoidOperation(func(tx *stm.Tx) {
 			cur := rl.cur.Get(tx)
 			max := rl.max.Get(tx)
 			tx.Assert(cur < max)
-			newCur := min(cur+available, max)
-			if newCur != cur {
-				rl.cur.Set(tx, newCur)
+			// Read here rather than before the Assert: waiting for room in the bucket can take
+			// arbitrarily long, and a count worked out beforehand is stale by the time it commits,
+			// along with the lastAdd it's added to, which then goes backwards.
+			lastAdd := rl.lastAdd.Get(tx)
+			available := numTokens(time.Since(lastAdd) / interval)
+			if available < 1 {
+				return
 			}
+			rl.cur.Set(tx, min(cur+available, max))
 			rl.lastAdd.Set(tx, lastAdd.Add(interval*time.Duration(available)))
 		}))
 	}
@@ -88,11 +93,16 @@ func (rl *Limiter) takeTokens(tx *stm.Tx, n numTokens) bool {
 		return true
 	}
 	cur := rl.cur.Get(tx)
-	if cur >= n {
-		rl.cur.Set(tx, cur-n)
-		return true
+	if cur < n {
+		return false
 	}
-	return false
+	if cur == rl.max.Get(tx) {
+		// Tokens don't accrue into a bucket that's already full, so the next one is due an interval
+		// from now, not from whenever the bucket filled up.
+		rl.lastAdd.Set(tx, time.Now())
+	}
+	rl.cur.Set(tx, cur-n)
+	return true
 }
 
 func (rl *Limiter) Wait(ctx context.Context) error {
